@@ -1,0 +1,79 @@
+---
+title: Announcing the Distilled GitHub SDK
+description: Automate repositories, issues, pull requests, releases, and Actions with an Effect-native SDK generated from GitHub's official OpenAPI description.
+type: blog
+date: 2026-07-15
+sidebar:
+  hidden: true
+seo:
+  title: Announcing the Effect-native Distilled GitHub SDK
+---
+
+GitHub automation lives on the critical path of modern delivery: repository policy, issues, pull requests, checks, releases, deployments, and security operations. [`@kevinmichaelchen/distilled-github`](https://www.npmjs.com/package/@kevinmichaelchen/distilled-github) brings that REST surface into Effect with runtime validation and explicit failure behavior.
+
+## GitHub, at a glance
+
+[GitHub](https://github.com) hosts source code and the collaboration and automation systems around it. Its [REST API](https://docs.github.com/en/rest) supports integrations that retrieve data and automate workflows, and GitHub publishes the complete contract in the official [`github/rest-api-description`](https://github.com/github/rest-api-description) repository.
+
+<CardGroup cols={2}>
+  <Card title="Official REST docs" href="https://docs.github.com/en/rest" icon="book-open">Authentication, versioning, rate limits, best practices, and endpoint references.</Card>
+  <Card title="Official OpenAPI" href="https://github.com/github/rest-api-description" icon="github">GitHub's versioned, machine-readable REST description.</Card>
+  <Card title="SDK repository" href="https://github.com/kevinmichaelchen/distilled-github" icon="code-2">GitHub policy plus 1,167 committed generated operations.</Card>
+  <Card title="Specification mirror" href="https://github.com/kevinmichaelchen/distilled-spec-github" icon="file-json">The exact bundled description used for generation.</Card>
+</CardGroup>
+
+## Why Effect and Distilled?
+
+GitHub workflows combine network calls with branching policy: look up repository state, create or update an issue, wait on checks, respect primary and secondary rate limits, and surface useful diagnostics. Effect makes dependencies, concurrency, retries, timeouts, cancellation, and tracing composable. Distilled adds decoded GitHub error envelopes, version headers, secret redaction, runtime schemas, and categorized retries.
+
+Because generated operations are committed, a GitHub API update produces a reviewable source diff. You can see which request or response types changed before releasing the next package.
+
+## How we made the SDK
+
+<Steps>
+  <Step title="Use GitHub's own contract">The source mirror extracts an exact versioned bundle from `github/rest-api-description` rather than inventing a smaller community schema.</Step>
+  <Step title="Keep source history bounded">The compact mirror avoids dragging a large upstream repository and its history into every consumer SDK checkout.</Step>
+  <Step title="Generate through the shared factory">The Alchemy-derived OpenAPI generator emits runtime schemas and yieldable Effect operations; GitHub-specific auth, errors, and retry policy stay handwritten.</Step>
+  <Step title="Release by workload identity">The private repository publishes through its dedicated GitHub Actions workflow and npm OIDC trust.</Step>
+</Steps>
+
+## Inspect a repository and open an issue
+
+Set `GITHUB_TOKEN`, then install:
+
+```bash
+npm install @kevinmichaelchen/distilled-github effect
+```
+
+```ts
+import * as Effect from "effect/Effect";
+import * as Layer from "effect/Layer";
+import * as FetchHttpClient from "effect/unstable/http/FetchHttpClient";
+import {
+  CredentialsFromEnv,
+  issuescreate,
+  reposget,
+} from "@kevinmichaelchen/distilled-github";
+
+const GitHubLive = Layer.mergeAll(FetchHttpClient.layer, CredentialsFromEnv);
+
+const program = Effect.gen(function* () {
+  const repository = yield* reposget({ owner: "acme", repo: "payments" });
+  if (!repository.has_issues) return repository;
+
+  return yield* issuescreate({
+    owner: "acme",
+    repo: "payments",
+    title: "Investigate checkout latency",
+    labels: ["performance", "triage"],
+  });
+});
+
+await Effect.runPromise(Effect.provide(program, GitHubLive));
+```
+
+`GITHUB_API_URL` supports GitHub Enterprise Server, while `GITHUB_API_VERSION` controls the explicit REST version header.
+
+## Available now
+
+Browse the [GitHub SDK guide](/sdks/github), inspect the [implementation](https://github.com/kevinmichaelchen/distilled-github), or install [`@kevinmichaelchen/distilled-github`](https://www.npmjs.com/package/@kevinmichaelchen/distilled-github).

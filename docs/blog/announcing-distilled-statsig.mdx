@@ -1,0 +1,72 @@
+---
+title: Announcing the Distilled Statsig SDK
+description: Manage feature gates, experiments, metrics, and release workflows through Statsig's Console API from Effect.
+type: blog
+date: 2026-07-15
+sidebar:
+  hidden: true
+seo:
+  title: Announcing the Effect-native Distilled Statsig SDK
+---
+
+Feature delivery becomes far more powerful when configuration is programmable: teams can create gates from infrastructure workflows, audit stale flags, coordinate staged rollouts, and keep experiment definitions synchronized. [`@kevinmichaelchen/distilled-statsig`](https://www.npmjs.com/package/@kevinmichaelchen/distilled-statsig) exposes Statsig's Console API as 312 Effect-native operations.
+
+## Statsig, at a glance
+
+[Statsig](https://www.statsig.com) provides feature gates, experimentation, product analytics, and release tooling. Its [Console API](https://docs.statsig.com/console-api/introduction) is the CRUD surface behind actions offered in the Statsig console, enabling programmatic management of gates, experiments, metrics, segments, layers, reports, teams, and release pipelines. Statsig maintains its public documentation in [`statsig-io/docs`](https://github.com/statsig-io/docs).
+
+<CardGroup cols={2}>
+  <Card title="Statsig" href="https://www.statsig.com" icon="flag">The product and platform overview.</Card>
+  <Card title="Console API docs" href="https://docs.statsig.com/console-api/introduction" icon="book-open">Authorization, versioning, rate limits, and the API reference.</Card>
+  <Card title="Distilled implementation" href="https://github.com/kevinmichaelchen/distilled-statsig" icon="code-2">Version policy and 312 committed generated operations.</Card>
+  <Card title="Official-spec mirror" href="https://github.com/kevinmichaelchen/distilled-spec-statsig" icon="file-json">Statsig's maintained `20240601` OpenAPI document at an exact commit.</Card>
+</CardGroup>
+
+## Why Effect and Distilled?
+
+Feature-management automation is policy automation. It deserves explicit failures, bounded retries, auditable inputs, and observable execution—especially when a script can enable a gate or start an experiment. Effect makes those controls composable. Distilled validates the API boundary, injects the Console API key as a redacted dependency, sends the pinned version header, decodes Statsig errors, and preserves retry guidance.
+
+The type signature shows what an operation needs and how it can fail. That makes destructive or rollout-changing programs easier to review than a chain of loosely typed HTTP calls.
+
+## How we made the SDK
+
+<Steps>
+  <Step title="Pin Statsig's dated contract">The source mirror fetches the official `20240601` OpenAPI document, matching the API-version header sent at runtime.</Step>
+  <Step title="Fix the shared seam">Statsig omits `operationId` on every route. The shared generator now derives stable names from tags and summaries and detects collisions.</Step>
+  <Step title="Generate the full Console API">The result is 312 committed operations covering gates, experiments, metrics, segments, layers, releases, settings, and more.</Step>
+  <Step title="Keep the vendor boundary small">Only credentials, base URL, version header, errors, and retry policy are handwritten.</Step>
+</Steps>
+
+## Audit temporary feature gates
+
+Set `STATSIG_API_KEY`, then install:
+
+```bash
+npm install @kevinmichaelchen/distilled-statsig effect
+```
+
+```ts
+import * as Effect from "effect/Effect";
+import * as Layer from "effect/Layer";
+import * as FetchHttpClient from "effect/unstable/http/FetchHttpClient";
+import {
+  CredentialsFromEnv,
+  GatesListGates,
+} from "@kevinmichaelchen/distilled-statsig";
+
+const StatsigLive = Layer.mergeAll(FetchHttpClient.layer, CredentialsFromEnv);
+
+const temporaryGates = GatesListGates({
+  type: "TEMPORARY",
+  includeArchived: "false",
+  limit: 100,
+});
+
+const result = await Effect.runPromise(Effect.provide(temporaryGates, StatsigLive));
+```
+
+The same package can create gates, manage rules and overrides, start experiments, retrieve pulse results, and coordinate release pipelines—without changing runtime conventions.
+
+## Available now
+
+Read the [Statsig SDK guide](/sdks/statsig), inspect the [implementation](https://github.com/kevinmichaelchen/distilled-statsig), or install [`@kevinmichaelchen/distilled-statsig`](https://www.npmjs.com/package/@kevinmichaelchen/distilled-statsig).

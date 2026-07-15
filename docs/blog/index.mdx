@@ -1,17 +1,42 @@
 ---
 title: Blog
-description: Notes from building and evolving the Distilled software factory.
+description: Service announcements, examples, and notes from evolving the Distilled software factory.
 sidebar:
   hidden: true
 ---
 
-<CardGroup cols={2}>
-  <Card title="Introducing Distilled" href="/blog/introducing-distilled" icon="factory">
-    From Alchemy's cloud-provider SDK factory to Jira, GitHub, and Slack.
+Each SDK announcement explains the service, why Effect improves the integration boundary, how the authoritative source becomes committed operations, and what a real first program looks like.
+
+<CardGroup cols={3}>
+  <Card title="Jira, distilled" href="/blog/announcing-distilled-jira" icon="ticket-check">
+    Search Jira with JQL through a validated, retry-aware Effect workflow.
+  </Card>
+  <Card title="GitHub, distilled" href="/blog/announcing-distilled-github" icon="github">
+    Inspect repositories and automate issues, pull requests, releases, and Actions.
+  </Card>
+  <Card title="Slack, distilled" href="/blog/announcing-distilled-slack" icon="message-square">
+    List channels and send traced messages from Slack's official typed source.
   </Card>
 </CardGroup>
 
+<CardGroup cols={3}>
+  <Card title="AvaTax, distilled" href="/blog/announcing-distilled-avalara" icon="receipt-text">
+    Calculate rates and build tax workflows across 470 AvaTax operations.
+  </Card>
+  <Card title="Statsig, distilled" href="/blog/announcing-distilled-statsig" icon="flag">
+    Manage gates, experiments, metrics, and release pipelines programmatically.
+  </Card>
+  <Card title="Auth0, distilled" href="/blog/announcing-distilled-auth0" icon="shield-check">
+    Search users and administer identity resources with explicit failures.
+  </Card>
+</CardGroup>
+
+## Factory notes
+
 <CardGroup cols={2}>
+  <Card title="Introducing Distilled" href="/blog/introducing-distilled" icon="factory">
+    From Alchemy's cloud-provider SDK factory to a standalone API SDK collection.
+  </Card>
   <Card title="Three APIs, three source shapes" href="/blog/three-apis-three-source-shapes" icon="git-compare-arrows">
     What AvaTax, Statsig, and Auth0 taught the factory about authoritative inputs.
   </Card>

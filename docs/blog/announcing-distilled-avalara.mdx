@@ -1,0 +1,74 @@
+---
+title: Announcing the Distilled Avalara AvaTax SDK
+description: Calculate tax, manage transactions, and automate AvaTax from Effect with 470 generated operations.
+type: blog
+date: 2026-07-15
+sidebar:
+  hidden: true
+seo:
+  title: Announcing the Effect-native Distilled AvaTax SDK
+---
+
+Sales-tax code sits at an uncomfortable intersection: business-critical, integration-heavy, and unforgiving of silent data-shape mistakes. [`@kevinmichaelchen/distilled-avalara`](https://www.npmjs.com/package/@kevinmichaelchen/distilled-avalara) brings Avalara AvaTax REST v2 into Effect with 470 generated operations and provider-aware runtime policy.
+
+## AvaTax, at a glance
+
+[Avalara AvaTax](https://www.avalara.com/us/en/products/sales-and-use-tax/avatax.html) automates sales and use tax calculations and related compliance workflows. Its REST v2 surface covers tax calculation, transactions, addresses, exemptions, certificates, filings, reports, jurisdictions, nexus, and account configuration. Avalara publishes [developer documentation and SDKs](https://developer.avalara.com/products/avatax/sdk), including its official [`AvaTax-REST-V2-JS-SDK`](https://github.com/avadev/AvaTax-REST-V2-JS-SDK).
+
+<CardGroup cols={2}>
+  <Card title="AvaTax product" href="https://www.avalara.com/us/en/products/sales-and-use-tax/avatax.html" icon="receipt-text">Avalara's overview of automated tax calculation.</Card>
+  <Card title="Official developer SDKs" href="https://developer.avalara.com/products/avatax/sdk" icon="book-open">REST v2 guidance and Avalara-maintained libraries.</Card>
+  <Card title="Distilled implementation" href="https://github.com/kevinmichaelchen/distilled-avalara" icon="code-2">Credential modes, policy, and 470 generated Effect operations.</Card>
+  <Card title="Official-spec mirror" href="https://github.com/kevinmichaelchen/distilled-spec-avalara" icon="file-json">The exact official Swagger document used for generation.</Card>
+</CardGroup>
+
+## Why Effect and Distilled?
+
+Tax calculations are ideal boundary-validation candidates. A request should not drift into production with malformed address or transaction data, and a response should not silently violate the contract your accounting path assumes. Distilled codecs validate both sides. Effect keeps parse failures, Avalara error envelopes, authentication errors, and retryable responses in a typed error channel while making secrets redacted configuration.
+
+That becomes more valuable as a flow grows from a rate estimate into transaction creation, adjustment, commitment, refunding, and reconciliation: the whole workflow shares one retry, tracing, and failure model.
+
+## How we made the SDK
+
+<Steps>
+  <Step title="Mirror Avalara's Swagger">A dedicated repository stores a formatted-but-semantically-unchanged copy of the official AvaTax REST v2 document.</Step>
+  <Step title="Pin the source commit">The implementation consumes that repository as a submodule, making every release traceable to one immutable contract.</Step>
+  <Step title="Generate and review">The shared Alchemy-derived Swagger/OpenAPI generator emits 470 operation modules, committed so changes remain visible in review.</Step>
+  <Step title="Model Avalara policy explicitly">The handwritten layer supports bearer tokens or account ID and license key authentication, the client header, vendor errors, and rate-limit guidance.</Step>
+</Steps>
+
+## Estimate the rate for an address
+
+Set either `AVALARA_BEARER_TOKEN` or `AVALARA_ACCOUNT_ID` and `AVALARA_LICENSE_KEY`. Use `AVALARA_BASE_URL=https://sandbox-rest.avatax.com` for a sandbox account.
+
+```bash
+npm install @kevinmichaelchen/distilled-avalara effect
+```
+
+```ts
+import * as Effect from "effect/Effect";
+import * as Layer from "effect/Layer";
+import * as FetchHttpClient from "effect/unstable/http/FetchHttpClient";
+import {
+  CredentialsFromEnv,
+  TaxRatesByAddress,
+} from "@kevinmichaelchen/distilled-avalara";
+
+const AvaTaxLive = Layer.mergeAll(FetchHttpClient.layer, CredentialsFromEnv);
+
+const estimate = TaxRatesByAddress({
+  line1: "100 Market Street",
+  city: "Philadelphia",
+  region: "PA",
+  postalCode: "19106",
+  country: "US",
+});
+
+const rates = await Effect.runPromise(Effect.provide(estimate, AvaTaxLive));
+```
+
+`TaxRatesByAddress` is useful for approximation. For a production calculation that accounts for nexus, sourcing, product taxability, exemptions, and document lifecycle, use the generated `CreateTransaction` operation.
+
+## Available now
+
+Start with the [AvaTax SDK guide](/sdks/avalara), inspect the [implementation](https://github.com/kevinmichaelchen/distilled-avalara), or install [`@kevinmichaelchen/distilled-avalara`](https://www.npmjs.com/package/@kevinmichaelchen/distilled-avalara).

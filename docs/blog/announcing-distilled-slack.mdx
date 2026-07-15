@@ -1,0 +1,80 @@
+---
+title: Announcing the Distilled Slack SDK
+description: Send messages and automate Slack workspaces with an Effect-native client generated from Slack's maintained TypeScript SDK.
+type: blog
+date: 2026-07-15
+sidebar:
+  hidden: true
+seo:
+  title: Announcing the Effect-native Distilled Slack SDK
+---
+
+Slack is often the human edge of an automation: the place a deployment reports back, an incident asks for attention, or a workflow becomes interactive. [`@kevinmichaelchen/distilled-slack`](https://www.npmjs.com/package/@kevinmichaelchen/distilled-slack) exposes Slack's Web API as traced, typed Effect operations.
+
+## Slack, at a glance
+
+[Slack](https://slack.com) is a collaboration platform with APIs for apps and workflow automation. The [Web API](https://docs.slack.dev/apis/web-api) queries information from a workspace and enacts changes through HTTP methods such as `conversations.list` and `chat.postMessage`. Slack maintains its current Node implementation in [`slackapi/node-slack-sdk`](https://github.com/slackapi/node-slack-sdk).
+
+<CardGroup cols={2}>
+  <Card title="Official Web API docs" href="https://docs.slack.dev/apis/web-api" icon="book-open">Slack's protocol, authentication, pagination, and response conventions.</Card>
+  <Card title="Method reference" href="https://docs.slack.dev/reference/methods" icon="list-tree">The catalog of workspace methods available to Slack apps.</Card>
+  <Card title="Official Node SDK" href="https://github.com/slackapi/node-slack-sdk" icon="github">The maintained typed source pinned by this SDK.</Card>
+  <Card title="Distilled repository" href="https://github.com/kevinmichaelchen/distilled-slack" icon="code-2">The AST generator, source pin, policy, and 268 generated operations.</Card>
+</CardGroup>
+
+## Why Effect and Distilled?
+
+A notification is easy; a dependable notification pipeline is not. It needs redacted tokens, typed Slack failures, rate-limit handling, structured retries, tracing, and testable client substitution. Effect gives those concerns one composable model, while Distilled turns every generated method into an operation whose requirements and errors are present in its type.
+
+The SDK retains Slack's official request and response types, so it stays familiar to users of `@slack/web-api` while gaining Effect-native orchestration.
+
+## How we made the SDK
+
+Slack is the instructive exception in the collection. Its old OpenAPI repository is archived, but its official TypeScript SDK is active and authoritative.
+
+<Steps>
+  <Step title="Choose the maintained source">Following Alchemy's non-OpenAPI strategy, the SDK pins `slackapi/node-slack-sdk` directly instead of generating from an abandoned schema.</Step>
+  <Step title="Inspect the method table">A small TypeScript AST generator reads Slack's official Web API method definitions and emits 268 Effect operations.</Step>
+  <Step title="Preserve upstream types">Inputs and outputs import Slack's own public TypeScript types; no parallel model layer is fabricated.</Step>
+  <Step title="Add the Effect boundary">Handwritten layers own token redaction, client construction, mapped Slack errors, and tracing spans.</Step>
+</Steps>
+
+## List channels and send a message
+
+Set `SLACK_TOKEN`, then install:
+
+```bash
+npm install @kevinmichaelchen/distilled-slack effect
+```
+
+```ts
+import * as Effect from "effect/Effect";
+import * as Layer from "effect/Layer";
+import {
+  CredentialsFromEnv,
+  SlackClientLive,
+  chatPostMessage,
+  conversationsList,
+} from "@kevinmichaelchen/distilled-slack";
+
+const SlackLive = SlackClientLive.pipe(Layer.provide(CredentialsFromEnv));
+
+const announce = Effect.gen(function* () {
+  const channels = yield* conversationsList({ types: "public_channel" });
+  const releases = channels.channels?.find((channel) => channel.name === "releases");
+  if (!releases?.id) return;
+
+  yield* chatPostMessage({
+    channel: releases.id,
+    text: "distilled-slack is live :tada:",
+  });
+});
+
+await Effect.runPromise(Effect.provide(announce, SlackLive));
+```
+
+Each operation carries a `Slack.<method>` tracing span, making multi-step workspace automation visible without wrapping every call manually.
+
+## Available now
+
+Read the [Slack SDK guide](/sdks/slack), inspect the [implementation and pinned upstream source](https://github.com/kevinmichaelchen/distilled-slack), or install [`@kevinmichaelchen/distilled-slack`](https://www.npmjs.com/package/@kevinmichaelchen/distilled-slack).

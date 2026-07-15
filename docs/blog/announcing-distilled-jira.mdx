@@ -1,0 +1,72 @@
+---
+title: Announcing the Distilled Jira SDK
+description: Search, inspect, and automate Jira Cloud from Effect with a reviewable SDK generated from Atlassian's official API contract.
+type: blog
+date: 2026-07-15
+sidebar:
+  hidden: true
+seo:
+  title: Announcing the Effect-native Distilled Jira SDK
+---
+
+Jira is where a great deal of engineering work becomes visible: planned work, active incidents, release blockers, support escalations, and the history around all of them. Today we are publishing [`@kevinmichaelchen/distilled-jira`](https://www.npmjs.com/package/@kevinmichaelchen/distilled-jira), an Effect-native Jira Cloud client built from Atlassian's official REST API v3 description.
+
+## Jira, at a glance
+
+[Jira](https://www.atlassian.com/software/jira) is Atlassian's work-management platform. Its [Cloud REST API v3](https://developer.atlassian.com/cloud/jira/platform/rest/v3/intro) lets integrations search and mutate issues, projects, workflows, fields, permissions, users, dashboards, filters, and more. Version 3 also represents rich text with Atlassian Document Format.
+
+<CardGroup cols={2}>
+  <Card title="Official API docs" href="https://developer.atlassian.com/cloud/jira/platform/rest/v3/intro" icon="book-open">Atlassian's current Jira Cloud REST reference and OpenAPI link.</Card>
+  <Card title="SDK repository" href="https://github.com/kevinmichaelchen/distilled-jira" icon="code-2">Handwritten Jira policy plus 587 committed generated operations.</Card>
+  <Card title="Specification mirror" href="https://github.com/kevinmichaelchen/distilled-spec-jira" icon="file-json">The exact official OpenAPI input, isolated in immutable Git history.</Card>
+  <Card title="npm package" href="https://www.npmjs.com/package/@kevinmichaelchen/distilled-jira" icon="package">The independently versioned public package.</Card>
+</CardGroup>
+
+## Why Effect and Distilled?
+
+Jira automation rarely ends with one request. A useful workflow searches, paginates, branches on issue state, retries rate limits, records failures, and often updates several issues. Effect gives that workflow one typed model for dependencies, failures, retries, concurrency, cancellation, and tracing. Distilled adds runtime request and response schemas, redacted credentials, Jira-specific error decoding, and `Retry-After` awareness.
+
+The result is more than autocomplete: API boundary failures remain explicit values, and the same program can be tested with replacement layers instead of hidden global clients.
+
+## How we made the SDK
+
+<Steps>
+  <Step title="Mirror the authority">The separate spec repository fetches Atlassian's official v3 OpenAPI document and records the exact input commit.</Step>
+  <Step title="Pin, patch, generate">The SDK pins that mirror as a submodule, applies only evidence-backed RFC 6902 patches, and generates 587 operation modules.</Step>
+  <Step title="Keep policy handwritten">Credentials, Jira error envelopes, retry categories, and client behavior remain small reviewable TypeScript modules.</Step>
+  <Step title="Publish independently">Generated output is committed, CI proves deterministic regeneration, and GitHub OIDC publishes without an npm token.</Step>
+</Steps>
+
+## Find unresolved issues in a project
+
+Set `JIRA_BASE_URL`, `JIRA_EMAIL`, and `JIRA_API_TOKEN`, then install the package:
+
+```bash
+npm install @kevinmichaelchen/distilled-jira effect
+```
+
+```ts
+import * as Effect from "effect/Effect";
+import * as Layer from "effect/Layer";
+import * as FetchHttpClient from "effect/unstable/http/FetchHttpClient";
+import {
+  CredentialsFromEnv,
+  searchAndReconcileIssuesUsingJql,
+} from "@kevinmichaelchen/distilled-jira";
+
+const JiraLive = Layer.mergeAll(FetchHttpClient.layer, CredentialsFromEnv);
+
+const openIssues = searchAndReconcileIssuesUsingJql({
+  jql: 'project = "PAY" AND resolution = Unresolved ORDER BY priority DESC',
+  fields: ["summary", "status", "priority", "assignee"],
+  maxResults: 50,
+});
+
+const result = await Effect.runPromise(Effect.provide(openIssues, JiraLive));
+```
+
+The output is decoded at the boundary. Jira authentication failures, missing permissions, malformed responses, and retryable status codes remain visible in the Effect error channel rather than collapsing into an untyped thrown value.
+
+## Available now
+
+Start with the [Jira SDK guide](/sdks/jira), inspect the [implementation](https://github.com/kevinmichaelchen/distilled-jira), or install [`@kevinmichaelchen/distilled-jira`](https://www.npmjs.com/package/@kevinmichaelchen/distilled-jira).

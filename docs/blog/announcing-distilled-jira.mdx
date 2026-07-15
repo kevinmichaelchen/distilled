@@ -75,6 +75,10 @@ import {
 const JiraLive = Layer.mergeAll(FetchHttpClient.layer, CredentialsFromEnv);
 ```
 
+:::tip[One layer, the whole Jira API]
+With `JiraLive` in scope, you can search and create issues, add comments, transition work, manage projects and workflows, inspect permissions, administer fields, and automate users, filters, and dashboards.
+:::
+
 ### Find unresolved issues in a project
 
 Build a review queue with JQL while requesting only the fields needed by the workflow.

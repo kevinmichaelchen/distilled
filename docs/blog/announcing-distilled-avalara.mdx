@@ -73,6 +73,10 @@ import {
 const AvaTaxLive = Layer.mergeAll(FetchHttpClient.layer, CredentialsFromEnv);
 ```
 
+:::tip[One layer, the whole AvaTax API]
+With `AvaTaxLive` in scope, you can calculate tax, validate addresses, create and reconcile transactions, manage nexus, exemptions and certificates, inspect jurisdictions, and automate filings and reports.
+:::
+
 ### Estimate the rate for an address
 
 Use the address endpoint for a quick jurisdictional estimate before constructing a transaction.

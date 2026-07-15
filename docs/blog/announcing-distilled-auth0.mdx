@@ -74,6 +74,10 @@ import {
 const Auth0Live = Layer.mergeAll(FetchHttpClient.layer, CredentialsFromEnv);
 ```
 
+:::tip[One layer, the whole Auth0 Management API]
+With `Auth0Live` in scope, you can manage users, roles, permissions, organizations, connections, applications, sessions, refresh tokens, tenant settings, and logs.
+:::
+
 ### Search for blocked users
 
 Find accounts that need security or support follow-up while requesting only the fields the workflow consumes.

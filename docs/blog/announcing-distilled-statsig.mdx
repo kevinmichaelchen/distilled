@@ -73,6 +73,10 @@ import {
 const StatsigLive = Layer.mergeAll(FetchHttpClient.layer, CredentialsFromEnv);
 ```
 
+:::tip[One layer, the whole Statsig Console API]
+With `StatsigLive` in scope, you can manage gates, experiments, metrics, segments, layers, overrides, reviews, teams, environments, and release pipelines.
+:::
+
 ### Audit temporary feature gates
 
 List temporary gates for a cleanup report or ownership review.

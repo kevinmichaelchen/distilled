@@ -75,6 +75,10 @@ import {
 const SlackLive = SlackClientLive.pipe(Layer.provide(CredentialsFromEnv));
 ```
 
+:::tip[One layer, the whole Slack Web API]
+With `SlackLive` in scope, you can send messages, read threads and history, manage channels, resolve users, upload files, add reactions, publish views, run workflows, and automate workspace administration.
+:::
+
 ### Send a channel message
 
 Post a release, incident, or workflow notification to a known channel.

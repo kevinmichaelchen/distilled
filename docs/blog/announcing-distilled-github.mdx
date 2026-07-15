@@ -73,6 +73,10 @@ import {
 const GitHubLive = Layer.mergeAll(FetchHttpClient.layer, CredentialsFromEnv);
 ```
 
+:::tip[One layer, the whole GitHub REST API]
+With `GitHubLive` in scope, you can automate repositories, issues, pull requests, Actions, releases, deployments, teams, projects, packages, webhooks, and security alerts.
+:::
+
 ### Inspect a repository
 
 Read repository metadata before deciding whether a workflow should inspect issues, create branches, or trigger another automation.

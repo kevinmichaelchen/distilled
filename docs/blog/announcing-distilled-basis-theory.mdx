@@ -1,0 +1,133 @@
+---
+title: Announcing the Distilled Basis Theory SDK
+description: Tokenize, govern, find, and safely use sensitive data through Effect-native Basis Theory operations.
+type: blog
+date: 2026-07-15
+sidebar:
+  hidden: true
+seo:
+  title: Announcing the Effect-native Distilled Basis Theory SDK
+---
+
+Sensitive-data infrastructure should make security boundaries more explicit, not hide them behind a mutable singleton and untyped exceptions. [`@kevinmichaelchen/distilled-basis-theory`](https://www.npmjs.com/package/@kevinmichaelchen/distilled-basis-theory) brings 117 Basis Theory API operations into Effect for token vaults, payment data, proxies, reactors, sessions, and tenant administration.
+
+## Basis Theory, at a glance
+
+[Basis Theory](https://basistheory.com) provides a programmable vault for tokenizing, governing, and safely using payment and other sensitive data. Its [API](https://developers.basistheory.com/docs/api/) covers the complete token lifecycle alongside access controls, search, token intents, proxies, reactors, 3DS, network tokens, wallets, applications, and tenant resources. Basis Theory maintains an [official Node SDK](https://github.com/Basis-Theory/node-sdk) and comprehensive [developer documentation](https://developers.basistheory.com/).
+
+<CardGroup cols={2}>
+  <Card title="Basis Theory" href="https://basistheory.com" icon="vault">The platform and its sensitive-data infrastructure.</Card>
+  <Card title="API reference" href="https://developers.basistheory.com/docs/api/" icon="book-open">The official REST resources, permissions, and examples.</Card>
+  <Card title="Official Node SDK" href="https://github.com/Basis-Theory/node-sdk" icon="github">Basis Theory's maintained JavaScript and TypeScript client.</Card>
+  <Card title="Distilled implementation" href="https://github.com/kevinmichaelchen/distilled-basis-theory" icon="code-2">Provider policy and 117 committed generated operations.</Card>
+</CardGroup>
+
+## Why Effect and Distilled?
+
+Vault operations sit directly on a trust boundary. Distilled keeps the Basis Theory application key redacted, injects it only through `BT-API-KEY`, decodes problem-details responses into typed failures, and exposes explicit retry policies. Effect lets token workflows compose those failures with timeouts, backoff, tracing, concurrency controls, and application-specific recovery without losing the error model.
+
+Configuration is a layer rather than hidden global state. Tests can swap in a test tenant and controlled HTTP client, while production programs can share one reviewed dependency graph. Generated request and response schemas remain committed and inspectable instead of disappearing inside a black-box code-generation release.
+
+## How we made the SDK
+
+<Steps>
+  <Step title="Mirror the official contract">A dedicated private source repository preserves Basis Theory's production-served OpenAPI 3.0.1 document byte-for-byte at an immutable commit.</Step>
+  <Step title="Pin the source as a submodule">The implementation repository records the exact mirror commit, matching Alchemy's reviewable source-boundary pattern.</Step>
+  <Step title="Generate the supported surface">The shared Alchemy-derived generator emits 117 operation modules and intentionally omits two endpoints marked deprecated upstream.</Step>
+  <Step title="Add Basis Theory policy">The handwritten layer owns production/test URLs, redacted application keys, `BT-API-KEY` injection, problem-details errors, and retry services.</Step>
+  <Step title="Publish independently">The package builds compiled ESM and declarations for Node, exposes TypeScript source to Bun, and releases through npm with GitHub OIDC.</Step>
+</Steps>
+
+## Code Examples
+
+Set `BASIS_THEORY_API_KEY`; for a test tenant, also set `BASIS_THEORY_API_URL=https://api.test.basistheory.com`. Then install:
+
+<Tabs>
+  <Tab title="npm">
+    ```bash
+    npm install @kevinmichaelchen/distilled-basis-theory effect
+    ```
+  </Tab>
+  <Tab title="pnpm">
+    ```bash
+    pnpm add @kevinmichaelchen/distilled-basis-theory effect
+    ```
+  </Tab>
+  <Tab title="bun">
+    ```bash
+    bun add @kevinmichaelchen/distilled-basis-theory effect
+    ```
+  </Tab>
+</Tabs>
+
+```ts
+import * as Effect from "effect/Effect";
+import * as Layer from "effect/Layer";
+import * as FetchHttpClient from "effect/unstable/http/FetchHttpClient";
+import {
+  CredentialsFromEnv,
+  tokensCreate,
+  tokensGetById,
+  tokensSearchV2,
+} from "@kevinmichaelchen/distilled-basis-theory";
+
+const BasisTheoryLive = Layer.mergeAll(
+  FetchHttpClient.layer,
+  CredentialsFromEnv,
+);
+```
+
+:::tip[One layer, the whole Basis Theory API]
+With `BasisTheoryLive` in scope, you can manage tokens and token intents, applications and permissions, proxies and reactors, sessions and 3DS, network tokens, Apple Pay and Google Pay, tenant resources, and audit logs.
+:::
+
+### Tokenize sensitive data
+
+Create a token while keeping searchable business identifiers in non-sensitive metadata. Use only synthetic values in development and follow Basis Theory's field-specific handling rules for real payment data.
+
+```ts
+const token = await Effect.runPromise(Effect.provide(
+  tokensCreate({
+    type: "token",
+    data: "synthetic-sensitive-value",
+    metadata: { customer_id: "cus_12345" },
+    fingerprint_expression: "{{ data }}",
+  }),
+  BasisTheoryLive,
+));
+```
+
+### Retrieve a token by ID
+
+Read one known token as part of a controlled workflow. The application key still needs the appropriate token permission for the token's container.
+
+```ts
+const token = await Effect.runPromise(Effect.provide(
+  tokensGetById({ id: "token-id-from-your-database" }),
+  BasisTheoryLive,
+));
+```
+
+### Search the vault
+
+Use Basis Theory's Lucene-based token search to locate records by exact metadata without fetching the entire vault. Search indexes should be designed sparingly because indexed values become discoverable to applications with `token:search` permission.
+
+```ts
+const matches = await Effect.runPromise(Effect.provide(
+  tokensSearchV2({
+    query: "metadata.customer_id:cus_12345",
+    size: 20,
+  }),
+  BasisTheoryLive,
+));
+```
+
+From the same runtime you can create token intents for staged validation, call third-party APIs through proxies, run custom reactors around sensitive data, manage wallet certificates, and inspect audit logs.
+
+## Security posture
+
+The SDK redacts credentials, but no client library can make arbitrary application logging safe. Keep sensitive plaintext out of metadata and telemetry, grant the narrowest container permissions, use the test API for development, and follow Basis Theory's [token](https://developers.basistheory.com/docs/concepts/what-are-tokens), [search](https://developers.basistheory.com/docs/api/tokens/search), [proxy](https://developers.basistheory.com/docs/concepts/proxies/), and [reactor](https://developers.basistheory.com/docs/concepts/reactors) guidance.
+
+## Available now
+
+Read the [Basis Theory SDK guide](/sdks/basis-theory), inspect the [implementation](https://github.com/kevinmichaelchen/distilled-basis-theory), browse the [spec mirror](https://github.com/kevinmichaelchen/distilled-spec-basis-theory), or install [`@kevinmichaelchen/distilled-basis-theory`](https://www.npmjs.com/package/@kevinmichaelchen/distilled-basis-theory).

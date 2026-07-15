@@ -10,10 +10,10 @@ export default defineConfig({
     href: "/",
   },
   banner: {
-    content: "Seven Effect-native API SDKs are live.",
+    content: "Eight Effect-native API SDKs are live.",
     link: { text: "Explore the catalog", href: "/sdks" },
     dismissible: true,
-    id: "distilled-seven-sdks",
+    id: "distilled-eight-sdks",
   },
   content: {
     root: "docs",

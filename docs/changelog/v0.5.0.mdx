@@ -1,0 +1,37 @@
+---
+title: v0.5.0
+description: Basis Theory joins the Distilled SDK factory with 117 Effect-native operations.
+type: changelog
+date: 2026-07-15
+changelog:
+  version: 0.5.0
+  category: SDK expansion
+sidebar:
+  label: v0.5.0
+  order: 1
+---
+
+This release adds Basis Theory while preserving the separate-source, pinned-submodule, committed-output, and independently published architecture learned from Alchemy.
+
+## Package
+
+- [`@kevinmichaelchen/distilled-basis-theory@0.1.0`](https://www.npmjs.com/package/@kevinmichaelchen/distilled-basis-theory) — 117 Effect-native Basis Theory API operations
+
+## Added
+
+- An immutable private mirror of Basis Theory's official production-served OpenAPI 3.0.1 document
+- Operations for token lifecycles, token intents, applications, proxies, reactors, sessions, 3DS, network tokens, wallets, tenants, and logs
+- Production and test API addressing with an explicit custom-base-URL override
+- Redacted `BASIS_THEORY_API_KEY` credentials injected through the official `BT-API-KEY` header
+- Problem-details error decoding, shared typed HTTP failures, retry hints, and provider retry services
+- A dedicated SDK guide and service announcement with three common token-vault workflows
+
+Two upstream-deprecated operations are intentionally excluded through the same `skipDeprecated` generator policy used by the rest of the factory.
+
+## Repositories
+
+- [`implementation`](https://github.com/kevinmichaelchen/distilled-basis-theory) · [`source mirror`](https://github.com/kevinmichaelchen/distilled-spec-basis-theory) · [`official API`](https://developers.basistheory.com/docs/api/)
+
+## Verified
+
+The SDK regenerates deterministically from its pinned submodule, typechecks under the strict shared configuration, passes its provider regression test, builds Bun/Node exports, and publishes independently through npm trusted publishing with GitHub OIDC.

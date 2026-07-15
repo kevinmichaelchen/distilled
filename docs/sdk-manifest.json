@@ -1,5 +1,17 @@
 [
   {
+    "id": "basis-theory",
+    "name": "Basis Theory",
+    "package": "@kevinmichaelchen/distilled-basis-theory",
+    "version": "0.1.0",
+    "operations": 117,
+    "source": "Basis Theory OpenAPI 3.0.1",
+    "strategy": "Mirrored specification",
+    "authentication": "API key",
+    "implementationVisibility": "Private",
+    "specificationVisibility": "Private"
+  },
+  {
     "id": "jira",
     "name": "Jira",
     "package": "@kevinmichaelchen/distilled-jira",

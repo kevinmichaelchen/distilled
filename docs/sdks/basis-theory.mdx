@@ -1,0 +1,89 @@
+---
+title: Basis Theory SDK
+description: Install, authenticate, and manage sensitive-data workflows through Basis Theory with Effect.
+sidebar:
+  icon: vault
+  badge: 0.1.0
+  order: 3
+---
+
+<Badge variant="success">Public package</Badge> <Badge>OpenAPI 3.0.1</Badge> <Badge>117 operations</Badge>
+
+The Basis Theory SDK pins the official API contract and keeps API-key redaction, production/test addressing, problem-details errors, and retry policy in the handwritten provider layer.
+
+## Install
+
+<CodeGroup>
+
+```bash npm
+npm install @kevinmichaelchen/distilled-basis-theory effect
+```
+
+```bash pnpm
+pnpm add @kevinmichaelchen/distilled-basis-theory effect
+```
+
+```bash bun
+bun add @kevinmichaelchen/distilled-basis-theory effect
+```
+
+</CodeGroup>
+
+## Authentication
+
+| Variable | Purpose |
+| --- | --- |
+| `BASIS_THEORY_API_KEY` | Private application key sent as `BT-API-KEY` |
+| `BASIS_THEORY_API_URL` | Optional API base URL; use `https://api.test.basistheory.com` for test tenants |
+
+Use the narrowest application permissions your workflow needs. Never place real cardholder data or other sensitive production values in source code, fixtures, logs, or metadata.
+
+## Quickstart
+
+Search for tokens belonging to a customer without retrieving every vault entry:
+
+```ts
+import * as Effect from "effect/Effect";
+import * as Layer from "effect/Layer";
+import * as FetchHttpClient from "effect/unstable/http/FetchHttpClient";
+import {
+  CredentialsFromEnv,
+  tokensSearchV2,
+} from "@kevinmichaelchen/distilled-basis-theory";
+
+const BasisTheoryLive = Layer.mergeAll(
+  FetchHttpClient.layer,
+  CredentialsFromEnv,
+);
+
+const program = tokensSearchV2({
+  query: "metadata.customer_id:cus_12345",
+  size: 20,
+});
+
+const tokens = await Effect.runPromise(
+  Effect.provide(program, BasisTheoryLive),
+);
+```
+
+:::tip[One layer, the whole Basis Theory API]
+The same layer can manage token lifecycles, token intents, applications, proxies, reactors, sessions, 3DS, network tokens, Apple Pay, Google Pay, tenant resources, and audit logs. [See three common Basis Theory workflows](/blog/announcing-distilled-basis-theory#code-examples).
+:::
+
+## Source and package
+
+<CardGroup cols={3}>
+  <Card title="npm package" href="https://www.npmjs.com/package/@kevinmichaelchen/distilled-basis-theory" icon="package-open">
+    Public package, generated source, declarations, and release history.
+  </Card>
+  <Card title="Implementation (private)" href="https://github.com/kevinmichaelchen/distilled-basis-theory" icon="lock-keyhole">
+    Basis Theory policy and 117 committed Effect operations.
+  </Card>
+  <Card title="Specification (private)" href="https://github.com/kevinmichaelchen/distilled-spec-basis-theory" icon="lock-keyhole">
+    Immutable mirror of Basis Theory's official OpenAPI contract.
+  </Card>
+</CardGroup>
+
+:::warning[Sensitive data boundary]
+Generated schemas validate API shapes, but they cannot prevent application code from logging token payloads. Keep observability on identifiers and metadata, use Effect's redaction tools for locally held secrets, and follow Basis Theory's guidance for PCI and sensitive-data handling.
+:::

@@ -6,6 +6,7 @@ export default defineMeta({
   order: 5,
   pages: [
     "index",
+    "announcing-distilled-basis-theory",
     "announcing-distilled-jira",
     "announcing-distilled-github",
     "announcing-distilled-slack",

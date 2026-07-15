@@ -3,13 +3,15 @@ title: GitHub SDK
 description: Effect-native GitHub REST operations generated from GitHub's versioned OpenAPI bundle.
 sidebar:
   icon: github
-  badge: 0.1.1
+  badge: 0.1.2
   order: 3
 ---
 
 <Badge variant="success">Published</Badge> <Badge>OpenAPI 3</Badge>
 
 GitHub maintains its REST API description in a large upstream repository. The spec mirror contains only the exact versioned bundle consumed by generation, avoiding an impractical downstream submodule while preserving authority.
+
+Slash-delimited operation IDs become lower camelCase exports such as `reposGet`, `issuesListForRepo`, and `pullsCreate`.
 
 <CodeGroup>
 

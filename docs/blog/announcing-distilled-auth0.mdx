@@ -37,7 +37,7 @@ Configuration is a layer rather than a hidden singleton. Tests can replace the t
   <Step title="Add tenant-aware runtime policy">The handwritten layer constructs `https://<tenant>/api/v2`, injects bearer authentication, redacts secrets, and decodes Auth0 errors.</Step>
 </Steps>
 
-## Search for blocked users
+## Code Examples
 
 Set `AUTH0_DOMAIN` and `AUTH0_MANAGEMENT_TOKEN`, then install:
 
@@ -62,14 +62,23 @@ Set `AUTH0_DOMAIN` and `AUTH0_MANAGEMENT_TOKEN`, then install:
 ```ts
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
+import * as Redacted from "effect/Redacted";
 import * as FetchHttpClient from "effect/unstable/http/FetchHttpClient";
 import {
   CredentialsFromEnv,
+  getLogs,
   getUsers,
+  postUsers,
 } from "@kevinmichaelchen/distilled-auth0";
 
 const Auth0Live = Layer.mergeAll(FetchHttpClient.layer, CredentialsFromEnv);
+```
 
+### Search for blocked users
+
+Find accounts that need security or support follow-up while requesting only the fields the workflow consumes.
+
+```ts
 const blockedUsers = getUsers({
   q: "blocked:true",
   search_engine: "v3",
@@ -81,7 +90,39 @@ const blockedUsers = getUsers({
 const result = await Effect.runPromise(Effect.provide(blockedUsers, Auth0Live));
 ```
 
-From the same runtime you can create users, manage roles and permissions, inspect logs, configure connections, and administer organizations.
+### Provision a database user
+
+Create an account in a database connection while keeping the initial password redacted in Effect logs and diagnostics.
+
+```ts
+const user = await Effect.runPromise(Effect.provide(
+  postUsers({
+    connection: "Username-Password-Authentication",
+    email: "new.user@example.com",
+    password: Redacted.make("replace-with-a-generated-secret"),
+    verify_email: true,
+  }),
+  Auth0Live,
+));
+```
+
+### Inspect recent tenant errors
+
+Pull recent failure events for an operational dashboard or incident workflow.
+
+```ts
+const failures = await Effect.runPromise(Effect.provide(
+  getLogs({
+    search: "type:f OR type:fe OR type:fu",
+    sort: "date:-1",
+    per_page: 100,
+    include_totals: true,
+  }),
+  Auth0Live,
+));
+```
+
+From the same runtime you can manage roles and permissions, configure connections, administer organizations, and revoke sessions or refresh tokens.
 
 ## Available now
 

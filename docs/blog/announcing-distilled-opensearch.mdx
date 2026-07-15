@@ -39,7 +39,7 @@ Distilled adds a reviewable API boundary. Inputs and outputs are backed by runti
 
 No prose was scraped into a pseudo-spec, and no generated file is edited by hand. The SDK pins an exact source commit, applies reviewable RFC 6902 patches only when needed, and fails CI if regeneration drifts.
 
-## Search an index
+## Code Examples
 
 Set `OPENSEARCH_URL` and your cluster credentials, then install:
 
@@ -68,6 +68,7 @@ import * as FetchHttpClient from "effect/unstable/http/FetchHttpClient";
 import {
   CredentialsFromEnv,
   clusterHealth0,
+  indicesCreate0,
   search2,
 } from "@kevinmichaelchen/distilled-opensearch";
 
@@ -75,21 +76,61 @@ const OpenSearchLive = Layer.mergeAll(
   FetchHttpClient.layer,
   CredentialsFromEnv,
 );
+```
 
-const program = Effect.gen(function* () {
-  const health = yield* clusterHealth0({ wait_for_status: "yellow" });
-  const errors = yield* search2({
+### Search an index
+
+Run a query-string search across an index pattern and return the most recent matching logs.
+
+```ts
+const errors = await Effect.runPromise(Effect.provide(
+  search2({
     index: "application-logs-*",
     q: "level:error AND service:checkout",
     size: 25,
     sort: "@timestamp:desc",
-  });
-  return { health, errors };
-});
+  }),
+  OpenSearchLive,
+));
+```
 
-const result = await Effect.runPromise(
-  Effect.provide(program, OpenSearchLive),
-);
+### Create an index
+
+Create a versioned application-log index with explicit shard settings and a small mapping.
+
+```ts
+const index = await Effect.runPromise(Effect.provide(
+  indicesCreate0({
+    index: "application-logs-2026.07",
+    settings: {
+      number_of_shards: 3,
+      number_of_replicas: 1,
+      refresh_interval: "5s",
+    },
+    mappings: {
+      properties: {
+        "@timestamp": { type: "date" },
+        level: { type: "keyword" },
+        message: { type: "text" },
+      },
+    },
+  }),
+  OpenSearchLive,
+));
+```
+
+### Wait for cluster health
+
+Gate an ingestion or deployment workflow until the cluster reaches at least yellow health.
+
+```ts
+const health = await Effect.runPromise(Effect.provide(
+  clusterHealth0({
+    wait_for_status: "yellow",
+    timeout: "30s",
+  }),
+  OpenSearchLive,
+));
 ```
 
 The same package can create indexes and mappings, index or update documents, run Query DSL searches and aggregations, manage snapshots, inspect nodes, and call supported plugin APIs.

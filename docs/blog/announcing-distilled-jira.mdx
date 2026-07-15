@@ -39,7 +39,7 @@ The result is more than autocomplete: API boundary failures remain explicit valu
 
 The shared generator also normalizes Atlassian's handful of Java-style dotted operation IDs into the same lower camelCase convention used by the rest of the Jira surface. That policy stays in the common factory rather than becoming a Jira-only collection of aliases.
 
-## Find unresolved issues in a project
+## Code Examples
 
 Set `JIRA_BASE_URL`, `JIRA_EMAIL`, and `JIRA_API_TOKEN`, then install the package:
 
@@ -66,12 +66,20 @@ import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as FetchHttpClient from "effect/unstable/http/FetchHttpClient";
 import {
+  addComment,
+  createIssue,
   CredentialsFromEnv,
   searchAndReconcileIssuesUsingJql,
 } from "@kevinmichaelchen/distilled-jira";
 
 const JiraLive = Layer.mergeAll(FetchHttpClient.layer, CredentialsFromEnv);
+```
 
+### Find unresolved issues in a project
+
+Build a review queue with JQL while requesting only the fields needed by the workflow.
+
+```ts
 const openIssues = searchAndReconcileIssuesUsingJql({
   jql: 'project = "PAY" AND resolution = Unresolved ORDER BY priority DESC',
   fields: ["summary", "status", "priority", "assignee"],
@@ -81,7 +89,46 @@ const openIssues = searchAndReconcileIssuesUsingJql({
 const result = await Effect.runPromise(Effect.provide(openIssues, JiraLive));
 ```
 
-The output is decoded at the boundary. Jira authentication failures, missing permissions, malformed responses, and retryable status codes remain visible in the Effect error channel rather than collapsing into an untyped thrown value.
+### Create an issue
+
+Create work from an alert, support escalation, or release check. Jira's flexible `fields` object accommodates project-specific custom fields.
+
+```ts
+const created = await Effect.runPromise(Effect.provide(
+  createIssue({
+    fields: {
+      project: { key: "PAY" },
+      issuetype: { name: "Bug" },
+      summary: "Checkout requests exceed the latency budget",
+      labels: ["automation", "performance"],
+    },
+  }),
+  JiraLive,
+));
+```
+
+### Add a structured comment
+
+Attach automation results to an existing issue using Atlassian Document Format.
+
+```ts
+const comment = await Effect.runPromise(Effect.provide(
+  addComment({
+    issueIdOrKey: "PAY-123",
+    body: {
+      type: "doc",
+      version: 1,
+      content: [{
+        type: "paragraph",
+        content: [{ type: "text", text: "The latest canary completed successfully." }],
+      }],
+    },
+  }),
+  JiraLive,
+));
+```
+
+Each output is decoded at the boundary. Jira authentication failures, missing permissions, malformed responses, and retryable status codes remain visible in the Effect error channel rather than collapsing into an untyped thrown value.
 
 ## Available now
 

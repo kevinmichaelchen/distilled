@@ -39,7 +39,7 @@ Slack is the instructive exception in the collection. Its old OpenAPI repository
   <Step title="Add the Effect boundary">Handwritten layers own token redaction, client construction, mapped Slack errors, and tracing spans.</Step>
 </Steps>
 
-## List channels and send a message
+## Code Examples
 
 Set `SLACK_TOKEN`, then install:
 
@@ -68,23 +68,51 @@ import {
   CredentialsFromEnv,
   SlackClientLive,
   chatPostMessage,
-  conversationsList,
+  conversationsHistory,
+  usersInfo,
 } from "@kevinmichaelchen/distilled-slack";
 
 const SlackLive = SlackClientLive.pipe(Layer.provide(CredentialsFromEnv));
+```
 
-const announce = Effect.gen(function* () {
-  const channels = yield* conversationsList({ types: "public_channel" });
-  const releases = channels.channels?.find((channel) => channel.name === "releases");
-  if (!releases?.id) return;
+### Send a channel message
 
-  yield* chatPostMessage({
-    channel: releases.id,
+Post a release, incident, or workflow notification to a known channel.
+
+```ts
+const announcement = await Effect.runPromise(Effect.provide(
+  chatPostMessage({
+    channel: "C01234567",
     text: "distilled-slack is live :tada:",
-  });
-});
+  }),
+  SlackLive,
+));
+```
 
-await Effect.runPromise(Effect.provide(announce, SlackLive));
+### Read recent channel history
+
+Fetch the latest conversation context for a digest, support workflow, or bot.
+
+```ts
+const history = await Effect.runPromise(Effect.provide(
+  conversationsHistory({
+    channel: "C01234567",
+    limit: 50,
+    inclusive: true,
+  }),
+  SlackLive,
+));
+```
+
+### Look up a user
+
+Resolve a Slack user ID before routing a notification or enriching an audit record.
+
+```ts
+const user = await Effect.runPromise(Effect.provide(
+  usersInfo({ user: "U01234567", include_locale: true }),
+  SlackLive,
+));
 ```
 
 Each operation carries a `Slack.<method>` tracing span, making multi-step workspace automation visible without wrapping every call manually.

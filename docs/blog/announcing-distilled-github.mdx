@@ -37,7 +37,7 @@ Because generated operations are committed, a GitHub API update produces a revie
   <Step title="Release by workload identity">The private repository publishes through its dedicated GitHub Actions workflow and npm OIDC trust.</Step>
 </Steps>
 
-## Inspect a repository and open an issue
+## Code Examples
 
 Set `GITHUB_TOKEN`, then install:
 
@@ -65,25 +65,61 @@ import * as Layer from "effect/Layer";
 import * as FetchHttpClient from "effect/unstable/http/FetchHttpClient";
 import {
   CredentialsFromEnv,
-  issuescreate,
-  reposget,
+  issuesListForRepo,
+  pullsCreate,
+  reposGet,
 } from "@kevinmichaelchen/distilled-github";
 
 const GitHubLive = Layer.mergeAll(FetchHttpClient.layer, CredentialsFromEnv);
+```
 
-const program = Effect.gen(function* () {
-  const repository = yield* reposget({ owner: "acme", repo: "payments" });
-  if (!repository.has_issues) return repository;
+### Inspect a repository
 
-  return yield* issuescreate({
+Read repository metadata before deciding whether a workflow should inspect issues, create branches, or trigger another automation.
+
+```ts
+const repository = await Effect.runPromise(Effect.provide(
+  reposGet({ owner: "acme", repo: "payments" }),
+  GitHubLive,
+));
+```
+
+### List open issues
+
+Build triage queues from open issues filtered by labels and ordered by recent activity.
+
+```ts
+const issues = await Effect.runPromise(Effect.provide(
+  issuesListForRepo({
     owner: "acme",
     repo: "payments",
-    title: "Investigate checkout latency",
-    labels: ["performance", "triage"],
-  });
-});
+    state: "open",
+    labels: "bug,triage",
+    sort: "updated",
+    direction: "desc",
+    per_page: 50,
+  }),
+  GitHubLive,
+));
+```
 
-await Effect.runPromise(Effect.provide(program, GitHubLive));
+### Open a pull request
+
+Turn a prepared branch into a reviewable pull request from a release bot or repository automation.
+
+```ts
+const pullRequest = await Effect.runPromise(Effect.provide(
+  pullsCreate({
+    owner: "acme",
+    repo: "payments",
+    title: "Reduce checkout latency",
+    head: "automation/checkout-cache",
+    base: "main",
+    body: "Adds a bounded cache around the pricing lookup.",
+    draft: true,
+  }),
+  GitHubLive,
+));
 ```
 
 `GITHUB_API_URL` supports GitHub Enterprise Server, while `GITHUB_API_VERSION` controls the explicit REST version header.

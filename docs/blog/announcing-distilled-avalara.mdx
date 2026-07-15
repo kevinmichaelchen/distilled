@@ -37,7 +37,7 @@ That becomes more valuable as a flow grows from a rate estimate into transaction
   <Step title="Model Avalara policy explicitly">The handwritten layer supports bearer tokens or account ID and license key authentication, the client header, vendor errors, and rate-limit guidance.</Step>
 </Steps>
 
-## Estimate the rate for an address
+## Code Examples
 
 Set either `AVALARA_BEARER_TOKEN` or `AVALARA_ACCOUNT_ID` and `AVALARA_LICENSE_KEY`. Use `AVALARA_BASE_URL=https://sandbox-rest.avatax.com` for a sandbox account.
 
@@ -64,12 +64,20 @@ import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as FetchHttpClient from "effect/unstable/http/FetchHttpClient";
 import {
+  createTransaction,
   CredentialsFromEnv,
+  getTransactionByCode,
   taxRatesByAddress,
 } from "@kevinmichaelchen/distilled-avalara";
 
 const AvaTaxLive = Layer.mergeAll(FetchHttpClient.layer, CredentialsFromEnv);
+```
 
+### Estimate the rate for an address
+
+Use the address endpoint for a quick jurisdictional estimate before constructing a transaction.
+
+```ts
 const estimate = taxRatesByAddress({
   line1: "100 Market Street",
   city: "Philadelphia",
@@ -81,7 +89,50 @@ const estimate = taxRatesByAddress({
 const rates = await Effect.runPromise(Effect.provide(estimate, AvaTaxLive));
 ```
 
-`taxRatesByAddress` is useful for approximation. For a production calculation that accounts for nexus, sourcing, product taxability, exemptions, and document lifecycle, use the generated `createTransaction` operation. All operation functions use lower camelCase; their input and output schemas use PascalCase.
+### Calculate a sales transaction
+
+Create an uncommitted sales order so AvaTax can account for nexus, sourcing, product taxability, exemptions, and line-level addresses.
+
+```ts
+const transaction = await Effect.runPromise(Effect.provide(
+  createTransaction({
+    companyCode: "DEFAULT",
+    type: "SalesOrder",
+    date: "2026-07-15",
+    customerCode: "CUST-1007",
+    commit: false,
+    lines: [{
+      number: "1",
+      quantity: 2,
+      amount: 199.98,
+      taxCode: "P0000000",
+      addresses: {
+        shipFrom: { line1: "1 Warehouse Way", city: "Newark", region: "NJ", postalCode: "07102", country: "US" },
+        shipTo: { line1: "100 Market Street", city: "Philadelphia", region: "PA", postalCode: "19106", country: "US" },
+      },
+    }],
+  }),
+  AvaTaxLive,
+));
+```
+
+### Retrieve a transaction for reconciliation
+
+Look up a previously calculated document by the identifiers stored in an order or accounting system.
+
+```ts
+const recorded = await Effect.runPromise(Effect.provide(
+  getTransactionByCode({
+    companyCode: "DEFAULT",
+    transactionCode: "ORDER-10492",
+    documentType: "SalesOrder",
+    $include: "Lines,Details",
+  }),
+  AvaTaxLive,
+));
+```
+
+All operation functions use lower camelCase; their input and output schemas use PascalCase.
 
 ## Available now
 

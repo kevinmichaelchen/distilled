@@ -37,7 +37,7 @@ The type signature shows what an operation needs and how it can fail. That makes
   <Step title="Keep the vendor boundary small">Only credentials, base URL, version header, errors, and retry policy are handwritten.</Step>
 </Steps>
 
-## Audit temporary feature gates
+## Code Examples
 
 Set `STATSIG_API_KEY`, then install:
 
@@ -65,11 +65,19 @@ import * as Layer from "effect/Layer";
 import * as FetchHttpClient from "effect/unstable/http/FetchHttpClient";
 import {
   CredentialsFromEnv,
+  experimentsListExperiments,
+  gatesCreateGate,
   gatesListGates,
 } from "@kevinmichaelchen/distilled-statsig";
 
 const StatsigLive = Layer.mergeAll(FetchHttpClient.layer, CredentialsFromEnv);
+```
 
+### Audit temporary feature gates
+
+List temporary gates for a cleanup report or ownership review.
+
+```ts
 const temporaryGates = gatesListGates({
   type: "TEMPORARY",
   includeArchived: "false",
@@ -79,7 +87,41 @@ const temporaryGates = gatesListGates({
 const result = await Effect.runPromise(Effect.provide(temporaryGates, StatsigLive));
 ```
 
-The same package can create gates, manage rules and overrides, start experiments, retrieve pulse results, and coordinate release pipelines—without changing runtime conventions.
+### Create a feature gate
+
+Provision a disabled temporary gate that can move through review and rollout policy before receiving traffic.
+
+```ts
+const gate = await Effect.runPromise(Effect.provide(
+  gatesCreateGate({
+    id: "checkout-redesign",
+    name: "Checkout redesign",
+    description: "Controls the new checkout experience.",
+    type: "TEMPORARY",
+    isEnabled: false,
+    tags: ["checkout", "web"],
+    idType: "userID",
+  }),
+  StatsigLive,
+));
+```
+
+### List active experiments
+
+Build an experiment inventory for dashboards, governance, or automated health checks.
+
+```ts
+const experiments = await Effect.runPromise(Effect.provide(
+  experimentsListExperiments({
+    status: "active",
+    fields: ["id", "name", "status", "teamID", "createdTime"],
+    limit: 100,
+  }),
+  StatsigLive,
+));
+```
+
+The same package can manage rules and overrides, retrieve pulse results, and coordinate release pipelines—without changing runtime conventions.
 
 Because Statsig omits operation IDs, Distilled derives these names from tags and summaries. The shared generator normalizes them to lower camelCase while retaining collision detection and deterministic output.
 

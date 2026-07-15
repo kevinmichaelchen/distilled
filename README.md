@@ -9,4 +9,6 @@ This package intentionally pins and re-exports `@distilled.cloud/core@0.29.0`, t
 - Yieldable operations, pagination streams, retry policies, categorized errors, sensitive fields, tracing, and debug logging.
 - Deterministic OpenAPI 2/3 generation with documented RFC 6902 patch envelopes.
 
-Vendor repositories import subpaths such as `@kevinmichaelchen/distilled/client` and `@kevinmichaelchen/distilled/openapi/generate`. No forked runtime code lives here. `scripts/generate-openapi.ts` is vendored verbatim from audited Alchemy commit `bf5f2b4` because `@distilled.cloud/core@0.29.0` declares that export but omits `scripts/` from its published npm files. Upgrades are deliberate diffs against Alchemy's source.
+Vendor repositories import subpaths such as `@kevinmichaelchen/distilled/client` and `@kevinmichaelchen/distilled/openapi/generate`. No forked runtime code lives here. `scripts/generate-openapi.ts` is vendored from audited Alchemy commit `bf5f2b4` because `@distilled.cloud/core@0.29.0` declares that export but omits `scripts/` from its published npm files. Local adaptations are limited to regression-tested, cross-vendor generator fixes; the first quotes non-identifier OpenAPI parameter names such as GitHub's `enterprise-team`. Upgrades are deliberate diffs against Alchemy's source.
+
+See [ARCHITECTURE.md](./ARCHITECTURE.md) for the source-strategy decision rule and repository topology.

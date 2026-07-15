@@ -82,10 +82,10 @@ With `GitHubLive` in scope, you can automate repositories, issues, pull requests
 Read repository metadata before deciding whether a workflow should inspect issues, create branches, or trigger another automation.
 
 ```ts
-const repository = await Effect.runPromise(Effect.provide(
-  reposGet({ owner: "acme", repo: "payments" }),
-  GitHubLive,
-));
+const inspectRepository = reposGet({
+  owner: "acme",
+  repo: "payments",
+}).pipe(Effect.provide(GitHubLive));
 ```
 
 ### List open issues
@@ -93,18 +93,15 @@ const repository = await Effect.runPromise(Effect.provide(
 Build triage queues from open issues filtered by labels and ordered by recent activity.
 
 ```ts
-const issues = await Effect.runPromise(Effect.provide(
-  issuesListForRepo({
-    owner: "acme",
-    repo: "payments",
-    state: "open",
-    labels: "bug,triage",
-    sort: "updated",
-    direction: "desc",
-    per_page: 50,
-  }),
-  GitHubLive,
-));
+const listOpenIssues = issuesListForRepo({
+  owner: "acme",
+  repo: "payments",
+  state: "open",
+  labels: "bug,triage",
+  sort: "updated",
+  direction: "desc",
+  per_page: 50,
+}).pipe(Effect.provide(GitHubLive));
 ```
 
 ### Open a pull request
@@ -112,18 +109,15 @@ const issues = await Effect.runPromise(Effect.provide(
 Turn a prepared branch into a reviewable pull request from a release bot or repository automation.
 
 ```ts
-const pullRequest = await Effect.runPromise(Effect.provide(
-  pullsCreate({
-    owner: "acme",
-    repo: "payments",
-    title: "Reduce checkout latency",
-    head: "automation/checkout-cache",
-    base: "main",
-    body: "Adds a bounded cache around the pricing lookup.",
-    draft: true,
-  }),
-  GitHubLive,
-));
+const openPullRequest = pullsCreate({
+  owner: "acme",
+  repo: "payments",
+  title: "Reduce checkout latency",
+  head: "automation/checkout-cache",
+  base: "main",
+  body: "Adds a bounded cache around the pricing lookup.",
+  draft: true,
+}).pipe(Effect.provide(GitHubLive));
 ```
 
 `GITHUB_API_URL` supports GitHub Enterprise Server, while `GITHUB_API_VERSION` controls the explicit REST version header.

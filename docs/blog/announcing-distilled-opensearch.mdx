@@ -87,15 +87,12 @@ With `OpenSearchLive` in scope, you can manage indexes and mappings, read and wr
 Run a query-string search across an index pattern and return the most recent matching logs.
 
 ```ts
-const errors = await Effect.runPromise(Effect.provide(
-  search2({
-    index: "application-logs-*",
-    q: "level:error AND service:checkout",
-    size: 25,
-    sort: "@timestamp:desc",
-  }),
-  OpenSearchLive,
-));
+const searchRecentErrors = search2({
+  index: "application-logs-*",
+  q: "level:error AND service:checkout",
+  size: 25,
+  sort: "@timestamp:desc",
+}).pipe(Effect.provide(OpenSearchLive));
 ```
 
 ### Create an index
@@ -103,24 +100,21 @@ const errors = await Effect.runPromise(Effect.provide(
 Create a versioned application-log index with explicit shard settings and a small mapping.
 
 ```ts
-const index = await Effect.runPromise(Effect.provide(
-  indicesCreate0({
-    index: "application-logs-2026.07",
-    settings: {
-      number_of_shards: 3,
-      number_of_replicas: 1,
-      refresh_interval: "5s",
+const createLogIndex = indicesCreate0({
+  index: "application-logs-2026.07",
+  settings: {
+    number_of_shards: 3,
+    number_of_replicas: 1,
+    refresh_interval: "5s",
+  },
+  mappings: {
+    properties: {
+      "@timestamp": { type: "date" },
+      level: { type: "keyword" },
+      message: { type: "text" },
     },
-    mappings: {
-      properties: {
-        "@timestamp": { type: "date" },
-        level: { type: "keyword" },
-        message: { type: "text" },
-      },
-    },
-  }),
-  OpenSearchLive,
-));
+  },
+}).pipe(Effect.provide(OpenSearchLive));
 ```
 
 ### Wait for cluster health
@@ -128,13 +122,10 @@ const index = await Effect.runPromise(Effect.provide(
 Gate an ingestion or deployment workflow until the cluster reaches at least yellow health.
 
 ```ts
-const health = await Effect.runPromise(Effect.provide(
-  clusterHealth0({
-    wait_for_status: "yellow",
-    timeout: "30s",
-  }),
-  OpenSearchLive,
-));
+const waitForClusterHealth = clusterHealth0({
+  wait_for_status: "yellow",
+  timeout: "30s",
+}).pipe(Effect.provide(OpenSearchLive));
 ```
 
 The same package can create indexes and mappings, index or update documents, run Query DSL searches and aggregations, manage snapshots, inspect nodes, and call supported plugin APIs.

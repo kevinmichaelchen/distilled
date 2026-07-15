@@ -90,7 +90,7 @@ const estimate = taxRatesByAddress({
   country: "US",
 });
 
-const rates = await Effect.runPromise(Effect.provide(estimate, AvaTaxLive));
+const estimateAddressRates = estimate.pipe(Effect.provide(AvaTaxLive));
 ```
 
 ### Calculate a sales transaction
@@ -98,26 +98,23 @@ const rates = await Effect.runPromise(Effect.provide(estimate, AvaTaxLive));
 Create an uncommitted sales order so AvaTax can account for nexus, sourcing, product taxability, exemptions, and line-level addresses.
 
 ```ts
-const transaction = await Effect.runPromise(Effect.provide(
-  createTransaction({
-    companyCode: "DEFAULT",
-    type: "SalesOrder",
-    date: "2026-07-15",
-    customerCode: "CUST-1007",
-    commit: false,
-    lines: [{
-      number: "1",
-      quantity: 2,
-      amount: 199.98,
-      taxCode: "P0000000",
-      addresses: {
-        shipFrom: { line1: "1 Warehouse Way", city: "Newark", region: "NJ", postalCode: "07102", country: "US" },
-        shipTo: { line1: "100 Market Street", city: "Philadelphia", region: "PA", postalCode: "19106", country: "US" },
-      },
-    }],
-  }),
-  AvaTaxLive,
-));
+const calculateSalesTransaction = createTransaction({
+  companyCode: "DEFAULT",
+  type: "SalesOrder",
+  date: "2026-07-15",
+  customerCode: "CUST-1007",
+  commit: false,
+  lines: [{
+    number: "1",
+    quantity: 2,
+    amount: 199.98,
+    taxCode: "P0000000",
+    addresses: {
+      shipFrom: { line1: "1 Warehouse Way", city: "Newark", region: "NJ", postalCode: "07102", country: "US" },
+      shipTo: { line1: "100 Market Street", city: "Philadelphia", region: "PA", postalCode: "19106", country: "US" },
+    },
+  }],
+}).pipe(Effect.provide(AvaTaxLive));
 ```
 
 ### Retrieve a transaction for reconciliation
@@ -125,15 +122,12 @@ const transaction = await Effect.runPromise(Effect.provide(
 Look up a previously calculated document by the identifiers stored in an order or accounting system.
 
 ```ts
-const recorded = await Effect.runPromise(Effect.provide(
-  getTransactionByCode({
-    companyCode: "DEFAULT",
-    transactionCode: "ORDER-10492",
-    documentType: "SalesOrder",
-    $include: "Lines,Details",
-  }),
-  AvaTaxLive,
-));
+const retrieveTransaction = getTransactionByCode({
+  companyCode: "DEFAULT",
+  transactionCode: "ORDER-10492",
+  documentType: "SalesOrder",
+  $include: "Lines,Details",
+}).pipe(Effect.provide(AvaTaxLive));
 ```
 
 All operation functions use lower camelCase; their input and output schemas use PascalCase.

@@ -86,15 +86,12 @@ With `BasisTheoryLive` in scope, you can manage tokens and token intents, applic
 Create a token while keeping searchable business identifiers in non-sensitive metadata. Use only synthetic values in development and follow Basis Theory's field-specific handling rules for real payment data.
 
 ```ts
-const token = await Effect.runPromise(Effect.provide(
-  tokensCreate({
-    type: "token",
-    data: "synthetic-sensitive-value",
-    metadata: { customer_id: "cus_12345" },
-    fingerprint_expression: "{{ data }}",
-  }),
-  BasisTheoryLive,
-));
+const tokenizeSensitiveData = tokensCreate({
+  type: "token",
+  data: "synthetic-sensitive-value",
+  metadata: { customer_id: "cus_12345" },
+  fingerprint_expression: "{{ data }}",
+}).pipe(Effect.provide(BasisTheoryLive));
 ```
 
 ### Retrieve a token by ID
@@ -102,10 +99,9 @@ const token = await Effect.runPromise(Effect.provide(
 Read one known token as part of a controlled workflow. The application key still needs the appropriate token permission for the token's container.
 
 ```ts
-const token = await Effect.runPromise(Effect.provide(
-  tokensGetById({ id: "token-id-from-your-database" }),
-  BasisTheoryLive,
-));
+const retrieveToken = tokensGetById({
+  id: "token-id-from-your-database",
+}).pipe(Effect.provide(BasisTheoryLive));
 ```
 
 ### Search the vault
@@ -113,13 +109,10 @@ const token = await Effect.runPromise(Effect.provide(
 Use Basis Theory's Lucene-based token search to locate records by exact metadata without fetching the entire vault. Search indexes should be designed sparingly because indexed values become discoverable to applications with `token:search` permission.
 
 ```ts
-const matches = await Effect.runPromise(Effect.provide(
-  tokensSearchV2({
-    query: "metadata.customer_id:cus_12345",
-    size: 20,
-  }),
-  BasisTheoryLive,
-));
+const searchVault = tokensSearchV2({
+  query: "metadata.customer_id:cus_12345",
+  size: 20,
+}).pipe(Effect.provide(BasisTheoryLive));
 ```
 
 From the same runtime you can create token intents for staged validation, call third-party APIs through proxies, run custom reactors around sensitive data, manage wallet certificates, and inspect audit logs.

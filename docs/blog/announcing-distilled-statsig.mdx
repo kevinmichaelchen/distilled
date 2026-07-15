@@ -88,7 +88,7 @@ const temporaryGates = gatesListGates({
   limit: 100,
 });
 
-const result = await Effect.runPromise(Effect.provide(temporaryGates, StatsigLive));
+const auditTemporaryGates = temporaryGates.pipe(Effect.provide(StatsigLive));
 ```
 
 ### Create a feature gate
@@ -96,18 +96,15 @@ const result = await Effect.runPromise(Effect.provide(temporaryGates, StatsigLiv
 Provision a disabled temporary gate that can move through review and rollout policy before receiving traffic.
 
 ```ts
-const gate = await Effect.runPromise(Effect.provide(
-  gatesCreateGate({
-    id: "checkout-redesign",
-    name: "Checkout redesign",
-    description: "Controls the new checkout experience.",
-    type: "TEMPORARY",
-    isEnabled: false,
-    tags: ["checkout", "web"],
-    idType: "userID",
-  }),
-  StatsigLive,
-));
+const createCheckoutGate = gatesCreateGate({
+  id: "checkout-redesign",
+  name: "Checkout redesign",
+  description: "Controls the new checkout experience.",
+  type: "TEMPORARY",
+  isEnabled: false,
+  tags: ["checkout", "web"],
+  idType: "userID",
+}).pipe(Effect.provide(StatsigLive));
 ```
 
 ### List active experiments
@@ -115,14 +112,11 @@ const gate = await Effect.runPromise(Effect.provide(
 Build an experiment inventory for dashboards, governance, or automated health checks.
 
 ```ts
-const experiments = await Effect.runPromise(Effect.provide(
-  experimentsListExperiments({
-    status: "active",
-    fields: ["id", "name", "status", "teamID", "createdTime"],
-    limit: 100,
-  }),
-  StatsigLive,
-));
+const listActiveExperiments = experimentsListExperiments({
+  status: "active",
+  fields: ["id", "name", "status", "teamID", "createdTime"],
+  limit: 100,
+}).pipe(Effect.provide(StatsigLive));
 ```
 
 The same package can manage rules and overrides, retrieve pulse results, and coordinate release pipelines—without changing runtime conventions.

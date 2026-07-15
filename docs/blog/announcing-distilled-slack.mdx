@@ -84,13 +84,10 @@ With `SlackLive` in scope, you can send messages, read threads and history, mana
 Post a release, incident, or workflow notification to a known channel.
 
 ```ts
-const announcement = await Effect.runPromise(Effect.provide(
-  chatPostMessage({
-    channel: "C01234567",
-    text: "distilled-slack is live :tada:",
-  }),
-  SlackLive,
-));
+const sendAnnouncement = chatPostMessage({
+  channel: "C01234567",
+  text: "distilled-slack is live :tada:",
+}).pipe(Effect.provide(SlackLive));
 ```
 
 ### Read recent channel history
@@ -98,14 +95,11 @@ const announcement = await Effect.runPromise(Effect.provide(
 Fetch the latest conversation context for a digest, support workflow, or bot.
 
 ```ts
-const history = await Effect.runPromise(Effect.provide(
-  conversationsHistory({
-    channel: "C01234567",
-    limit: 50,
-    inclusive: true,
-  }),
-  SlackLive,
-));
+const readRecentHistory = conversationsHistory({
+  channel: "C01234567",
+  limit: 50,
+  inclusive: true,
+}).pipe(Effect.provide(SlackLive));
 ```
 
 ### Look up a user
@@ -113,10 +107,10 @@ const history = await Effect.runPromise(Effect.provide(
 Resolve a Slack user ID before routing a notification or enriching an audit record.
 
 ```ts
-const user = await Effect.runPromise(Effect.provide(
-  usersInfo({ user: "U01234567", include_locale: true }),
-  SlackLive,
-));
+const lookUpUser = usersInfo({
+  user: "U01234567",
+  include_locale: true,
+}).pipe(Effect.provide(SlackLive));
 ```
 
 Each operation carries a `Slack.<method>` tracing span, making multi-step workspace automation visible without wrapping every call manually.

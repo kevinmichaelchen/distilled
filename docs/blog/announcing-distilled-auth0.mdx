@@ -91,7 +91,7 @@ const blockedUsers = getUsers({
   per_page: 50,
 });
 
-const result = await Effect.runPromise(Effect.provide(blockedUsers, Auth0Live));
+const findBlockedUsers = blockedUsers.pipe(Effect.provide(Auth0Live));
 ```
 
 ### Provision a database user
@@ -99,15 +99,12 @@ const result = await Effect.runPromise(Effect.provide(blockedUsers, Auth0Live));
 Create an account in a database connection while keeping the initial password redacted in Effect logs and diagnostics.
 
 ```ts
-const user = await Effect.runPromise(Effect.provide(
-  postUsers({
-    connection: "Username-Password-Authentication",
-    email: "new.user@example.com",
-    password: Redacted.make("replace-with-a-generated-secret"),
-    verify_email: true,
-  }),
-  Auth0Live,
-));
+const provisionDatabaseUser = postUsers({
+  connection: "Username-Password-Authentication",
+  email: "new.user@example.com",
+  password: Redacted.make("replace-with-a-generated-secret"),
+  verify_email: true,
+}).pipe(Effect.provide(Auth0Live));
 ```
 
 ### Inspect recent tenant errors
@@ -115,15 +112,12 @@ const user = await Effect.runPromise(Effect.provide(
 Pull recent failure events for an operational dashboard or incident workflow.
 
 ```ts
-const failures = await Effect.runPromise(Effect.provide(
-  getLogs({
-    search: "type:f OR type:fe OR type:fu",
-    sort: "date:-1",
-    per_page: 100,
-    include_totals: true,
-  }),
-  Auth0Live,
-));
+const inspectRecentTenantErrors = getLogs({
+  search: "type:f OR type:fe OR type:fu",
+  sort: "date:-1",
+  per_page: 100,
+  include_totals: true,
+}).pipe(Effect.provide(Auth0Live));
 ```
 
 From the same runtime you can manage roles and permissions, configure connections, administer organizations, and revoke sessions or refresh tokens.

@@ -52,7 +52,7 @@ import * as FetchHttpClient from "effect/unstable/http/FetchHttpClient";
 import { CredentialsFromEnv, ping } from "@kevinmichaelchen/distilled-avalara";
 
 const AvaTaxLive = Layer.mergeAll(FetchHttpClient.layer, CredentialsFromEnv);
-const connection = await Effect.runPromise(Effect.provide(ping({}), AvaTaxLive));
+const checkAvaTaxConnection = ping({}).pipe(Effect.provide(AvaTaxLive));
 ```
 
 Statsig brings the same model to feature-management automation: typed Console API operations, a pinned API version, and composable failure handling. Auth0 does it for tenant administration, where identity-management changes benefit from validated responses and explicit, observable errors.

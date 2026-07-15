@@ -72,7 +72,7 @@ interface PathItem2 {
 }
 
 interface Operation2 {
-  operationId: string;
+  operationId?: string;
   summary?: string;
   description?: string;
   tags?: string[];
@@ -124,7 +124,7 @@ interface PathItem3 {
 }
 
 interface Operation3 {
-  operationId: string;
+  operationId?: string;
   summary?: string;
   description?: string;
   tags?: string[];
@@ -239,6 +239,32 @@ function toPascalCase(s: string): string {
 
 function operationIdToFunctionName(operationId: string): string {
   return toCamelCase(operationId);
+}
+
+function resolveOperationId(
+  operation: { operationId?: string; summary?: string; tags?: string[] },
+  method: string,
+  pathTemplate: string,
+  usedFunctionNames: Set<string>,
+): string {
+  const explicit = operation.operationId?.trim();
+  const label = explicit || [operation.tags?.[0], operation.summary].filter(Boolean).join(" ");
+  const fallback = label || `${method} ${pathTemplate}`;
+  let operationId = fallback;
+  let functionName = operationIdToFunctionName(operationId);
+
+  if (!explicit && usedFunctionNames.has(functionName)) {
+    operationId = `${fallback} ${method} ${pathTemplate}`;
+    functionName = operationIdToFunctionName(operationId);
+  }
+  if (!functionName || usedFunctionNames.has(functionName)) {
+    throw new Error(
+      `OpenAPI operation name collision for ${method.toUpperCase()} ${pathTemplate}: ${JSON.stringify(operationId)}`,
+    );
+  }
+
+  usedFunctionNames.add(functionName);
+  return operationId;
 }
 
 function escapeStringLiteral(s: string): string {
@@ -1773,6 +1799,7 @@ export function generateFromOpenAPI(config: GeneratorConfig): void {
 
   // Collect all operations
   const operations: GeneratedOperation[] = [];
+  const usedFunctionNames = new Set<string>();
 
   if (version === "2.0") {
     // Swagger 2.0 codepath
@@ -1786,7 +1813,13 @@ export function generateFromOpenAPI(config: GeneratorConfig): void {
         }
 
         try {
-          const functionName = operationIdToFunctionName(operation.operationId);
+          const operationId = resolveOperationId(
+            operation,
+            method,
+            pathTemplate,
+            usedFunctionNames,
+          );
+          const functionName = operationIdToFunctionName(operationId);
           // Merge path-level params and resolve `$ref`s before filtering by
           // `in` — otherwise ref'd path/query params are dropped.
           const parameters = resolveParameters2(
@@ -1819,7 +1852,7 @@ export function generateFromOpenAPI(config: GeneratorConfig): void {
 
           const { inputSchemaCode, inputSchemaName } =
             generateInputSchemaSwagger(
-              operation.operationId,
+              operationId,
               method,
               pathTemplate,
               parameters,
@@ -1838,7 +1871,7 @@ export function generateFromOpenAPI(config: GeneratorConfig): void {
             outputSchemaName,
             sensitiveImports: outputSensitiveImports,
           } = generateOutputSchema(
-            operation.operationId,
+            operationId,
             responseSchema,
             swagger,
           );
@@ -1896,7 +1929,7 @@ export function generateFromOpenAPI(config: GeneratorConfig): void {
             exports: [inputSchemaName, outputSchemaName, functionName],
           });
         } catch (error) {
-          console.error(`❌ ${operation.operationId}:`, error);
+          console.error(`❌ ${operation.operationId ?? `${method} ${pathTemplate}`}:`, error);
         }
       }
     }
@@ -1914,7 +1947,13 @@ export function generateFromOpenAPI(config: GeneratorConfig): void {
         }
 
         try {
-          const functionName = operationIdToFunctionName(operation.operationId);
+          const operationId = resolveOperationId(
+            operation,
+            method,
+            pathTemplate,
+            usedFunctionNames,
+          );
+          const functionName = operationIdToFunctionName(operationId);
           const parameters = resolveParameters3(
             oas,
             pathLevelParams,
@@ -1962,7 +2001,7 @@ export function generateFromOpenAPI(config: GeneratorConfig): void {
             opAny["x-distilled-no-follow-redirect"] === true || has3xxLocation;
 
           const { inputSchemaCode, inputSchemaName } = generateInputSchema3(
-            operation.operationId,
+            operationId,
             method,
             pathTemplate,
             parameters,
@@ -1982,7 +2021,7 @@ export function generateFromOpenAPI(config: GeneratorConfig): void {
             outputSchemaCode,
             outputSchemaName,
             sensitiveImports: outputSensitiveImports,
-          } = generateOutputSchema(operation.operationId, responseSchema, oas);
+          } = generateOutputSchema(operationId, responseSchema, oas);
           const sensitiveImports = {
             usesSensitiveString:
               sensitiveCtx.usesSensitiveString ||
@@ -2037,7 +2076,7 @@ export function generateFromOpenAPI(config: GeneratorConfig): void {
             exports: [inputSchemaName, outputSchemaName, functionName],
           });
         } catch (error) {
-          console.error(`❌ ${operation.operationId}:`, error);
+          console.error(`❌ ${operation.operationId ?? `${method} ${pathTemplate}`}:`, error);
         }
       }
     }

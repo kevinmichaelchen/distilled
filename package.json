@@ -1,6 +1,6 @@
 {
   "name": "@kevinmichaelchen/distilled",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Effect 4 runtime and generators for the Distilled SDK factory",
   "type": "module",
   "license": "Apache-2.0",

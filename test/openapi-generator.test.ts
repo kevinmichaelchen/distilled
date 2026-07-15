@@ -35,4 +35,31 @@ describe("OpenAPI generator adaptations", () => {
     const generated = await readFile(join(outputDir, "teamsget.ts"), "utf8");
     expect(generated).toContain('"enterprise-team": Schema.String.pipe(T.PathParam())');
   });
+
+  test("derives stable operation names when a vendor omits operationId", async () => {
+    const root = await mkdtemp(join(tmpdir(), "distilled-openapi-"));
+    roots.push(root);
+    const specPath = join(root, "openapi.json");
+    const outputDir = join(root, "operations");
+    const patchDir = join(root, "patches");
+    await mkdir(patchDir);
+    await Bun.write(specPath, JSON.stringify({
+      openapi: "3.0.3",
+      info: { title: "test", version: "1" },
+      paths: {
+        "/console/v1/alerts": {
+          get: {
+            tags: ["Alerts"],
+            summary: "List Topline Alerts",
+            responses: { "200": { description: "ok" } },
+          },
+        },
+      },
+    }));
+
+    await generateFromOpenAPI({ specPath, patchDir, outputDir, importPrefix: ".." });
+    const generated = await readFile(join(outputDir, "AlertsListToplineAlerts.ts"), "utf8");
+    expect(generated).toContain("export const AlertsListToplineAlerts");
+    expect(generated).toContain('path: "/console/v1/alerts"');
+  });
 });

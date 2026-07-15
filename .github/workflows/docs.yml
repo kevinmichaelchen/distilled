@@ -35,15 +35,20 @@ jobs:
           package-manager-cache: false
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
       - uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
+        if: vars.ENABLE_GITHUB_PAGES == 'true'
+        with:
+          enablement: true
       - run: bun install --frozen-lockfile
       - run: bun run docs:build
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4
+        if: vars.ENABLE_GITHUB_PAGES == 'true'
         with:
           path: dist
 
   deploy:
+    if: vars.ENABLE_GITHUB_PAGES == 'true'
     needs: build
     runs-on: ubuntu-latest
     environment:

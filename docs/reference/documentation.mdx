@@ -24,7 +24,15 @@ bun run docs:preview
 
 </CodeGroup>
 
-The static build lands in `dist/` and is deployed by GitHub Pages from `.github/workflows/docs.yml`.
+The static build lands in `dist/`. `.github/workflows/docs.yml` verifies every
+documentation change and is ready to deploy with GitHub Pages when the
+repository variable `ENABLE_GITHUB_PAGES` is set to `true`.
+
+> [!NOTE]
+> GitHub currently rejects Pages for this private repository under the owner's
+> plan. Keep the variable unset until private Pages is available or the
+> repository is intentionally made public; the build remains fully verified in
+> CI in the meantime.
 
 ## Reader and agent outputs
 

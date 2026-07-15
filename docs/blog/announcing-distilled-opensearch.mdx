@@ -1,0 +1,99 @@
+---
+title: Announcing the Distilled OpenSearch SDK
+description: Search, index, inspect, and administer OpenSearch clusters through 684 Effect-native operations.
+type: blog
+date: 2026-07-15
+sidebar:
+  hidden: true
+seo:
+  title: Announcing the Effect-native Distilled OpenSearch SDK
+---
+
+Search systems sit on a demanding boundary: workloads are concurrent, responses can be large, cluster health changes under load, and transient failures are normal rather than exceptional. [`@kevinmichaelchen/distilled-opensearch`](https://www.npmjs.com/package/@kevinmichaelchen/distilled-opensearch) brings 684 official OpenSearch REST operations into Effect with runtime schemas and explicit operational policy.
+
+## OpenSearch, at a glance
+
+[OpenSearch](https://opensearch.org) is an open-source search and analytics suite used for full-text search, observability, log analytics, vector search, and security analytics. Its [REST API](https://docs.opensearch.org/latest/api-reference/) covers documents, indexes, mappings, queries, aggregations, snapshots, cluster administration, and a broad plugin ecosystem. The project maintains its machine-readable source of truth in [`opensearch-project/opensearch-api-specification`](https://github.com/opensearch-project/opensearch-api-specification).
+
+<CardGroup cols={2}>
+  <Card title="OpenSearch" href="https://opensearch.org" icon="search">The open-source search and analytics project.</Card>
+  <Card title="REST API reference" href="https://docs.opensearch.org/latest/api-reference/" icon="book-open">Official document, index, search, and cluster APIs.</Card>
+  <Card title="Official specification" href="https://github.com/opensearch-project/opensearch-api-specification" icon="github">The OpenAPI source of truth and published client-generation release.</Card>
+  <Card title="Distilled implementation" href="https://github.com/kevinmichaelchen/distilled-opensearch" icon="code-2">Cluster policy and 684 committed Effect operations.</Card>
+</CardGroup>
+
+## Why Effect and Distilled?
+
+OpenSearch work rarely ends with one request. An ingestion flow may create an index, bulk-write documents, wait for a refresh, verify cluster health, and retry only the failures that are safe to repeat. Effect gives that sequence one model for typed failures, timeouts, backoff, concurrency, cancellation, tracing, and dependency injection.
+
+Distilled adds a reviewable API boundary. Inputs and outputs are backed by runtime schemas where the official contract is tractable; known HTTP statuses become typed errors; retry hints are preserved; secrets are redacted; and configuration is an explicit layer that tests can replace. The result is a better fit for long-lived search infrastructure than a bag of loosely related promise calls.
+
+## How we made the SDK
+
+<Steps>
+  <Step title="Use OpenSearch's source of truth">The project maintains modular YAML and publishes a merged OpenAPI 3.1 file specifically for clients and documentation.</Step>
+  <Step title="Mirror the published artifact">A dedicated source repository converts only YAML syntax to deterministic JSON and records each upstream revision in immutable Git history.</Step>
+  <Step title="Generate the complete surface">The shared Alchemy-style generator emits 684 committed operations spanning core search, indexes, snapshots, security, ML, observability, and plugins.</Step>
+  <Step title="Add cluster-aware runtime policy">The handwritten layer supports basic, bearer, or deliberately absent authentication, decodes OpenSearch error envelopes, and exposes retry composition.</Step>
+</Steps>
+
+No prose was scraped into a pseudo-spec, and no generated file is edited by hand. The SDK pins an exact source commit, applies reviewable RFC 6902 patches only when needed, and fails CI if regeneration drifts.
+
+## Search an index
+
+Set `OPENSEARCH_URL` and your cluster credentials, then install:
+
+<Tabs>
+  <Tab title="npm">
+    ```bash
+    npm install @kevinmichaelchen/distilled-opensearch effect
+    ```
+  </Tab>
+  <Tab title="pnpm">
+    ```bash
+    pnpm add @kevinmichaelchen/distilled-opensearch effect
+    ```
+  </Tab>
+  <Tab title="bun">
+    ```bash
+    bun add @kevinmichaelchen/distilled-opensearch effect
+    ```
+  </Tab>
+</Tabs>
+
+```ts
+import * as Effect from "effect/Effect";
+import * as Layer from "effect/Layer";
+import * as FetchHttpClient from "effect/unstable/http/FetchHttpClient";
+import {
+  CredentialsFromEnv,
+  clusterhealth0,
+  search2,
+} from "@kevinmichaelchen/distilled-opensearch";
+
+const OpenSearchLive = Layer.mergeAll(
+  FetchHttpClient.layer,
+  CredentialsFromEnv,
+);
+
+const program = Effect.gen(function* () {
+  const health = yield* clusterhealth0({ wait_for_status: "yellow" });
+  const errors = yield* search2({
+    index: "application-logs-*",
+    q: "level:error AND service:checkout",
+    size: 25,
+    sort: "@timestamp:desc",
+  });
+  return { health, errors };
+});
+
+const result = await Effect.runPromise(
+  Effect.provide(program, OpenSearchLive),
+);
+```
+
+The same package can create indexes and mappings, index or update documents, run Query DSL searches and aggregations, manage snapshots, inspect nodes, and call supported plugin APIs.
+
+## Available now
+
+Read the [OpenSearch SDK guide](/sdks/opensearch), inspect the [implementation](https://github.com/kevinmichaelchen/distilled-opensearch), browse the [spec mirror](https://github.com/kevinmichaelchen/distilled-spec-opensearch), or install [`@kevinmichaelchen/distilled-opensearch`](https://www.npmjs.com/package/@kevinmichaelchen/distilled-opensearch).

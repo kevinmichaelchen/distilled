@@ -1,0 +1,51 @@
+---
+title: OpenSearch SDK
+description: Effect-native OpenSearch operations generated from the project's official single-file OpenAPI 3.1 release.
+sidebar:
+  icon: search
+  badge: 0.1.1
+  order: 8
+---
+
+<Badge variant="success">Published</Badge> <Badge>OpenAPI 3.1</Badge> <Badge>684 operations</Badge>
+
+The OpenSearch SDK pins the official client-generation contract and keeps cluster addressing, authentication, error mapping, and retry policy in the handwritten provider layer.
+
+<CodeGroup>
+
+```bash npm
+npm install @kevinmichaelchen/distilled-opensearch effect
+```
+
+```bash pnpm
+pnpm add @kevinmichaelchen/distilled-opensearch effect
+```
+
+```bash bun
+bun add @kevinmichaelchen/distilled-opensearch effect
+```
+
+</CodeGroup>
+
+## Authentication
+
+Set `OPENSEARCH_URL` and either `OPENSEARCH_USERNAME` with `OPENSEARCH_PASSWORD`, or `OPENSEARCH_TOKEN`. A deliberately unsecured local cluster can use only `OPENSEARCH_URL`.
+
+Amazon OpenSearch Service uses AWS Signature Version 4. Supply a signing HTTP client layer for that deployment model; the core package deliberately does not import a cloud-provider SDK.
+
+## Repositories
+
+<CardGroup cols={2}>
+  <Card title="Implementation" href="https://github.com/kevinmichaelchen/distilled-opensearch" icon="code-2">
+    Provider policy and 684 committed Effect operations.
+  </Card>
+  <Card title="Specification" href="https://github.com/kevinmichaelchen/distilled-spec-opensearch" icon="file-json">
+    Immutable mirror of OpenSearch's official published OpenAPI release.
+  </Card>
+</CardGroup>
+
+[View the package on npm](https://www.npmjs.com/package/@kevinmichaelchen/distilled-opensearch).
+
+:::note
+OpenSearch publishes one operation for each supported path form, so generated names preserve the official operation ID suffixes such as `clusterhealth0` and `search2`.
+:::

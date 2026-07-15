@@ -1,0 +1,34 @@
+---
+title: v0.3.0
+description: OpenSearch joins the Distilled SDK factory with 684 Effect-native operations.
+type: changelog
+date: 2026-07-15
+changelog:
+  version: 0.3.0
+  category: SDK expansion
+sidebar:
+  label: v0.3.0
+  order: 1
+---
+
+This release adds OpenSearch while preserving the separate-source, committed-output, independently published architecture learned from Alchemy.
+
+## Package
+
+- [`@kevinmichaelchen/distilled-opensearch@0.1.1`](https://www.npmjs.com/package/@kevinmichaelchen/distilled-opensearch) — 684 Effect-native OpenSearch REST operations
+
+## Added
+
+- An immutable source mirror of OpenSearch's official published single-file OpenAPI 3.1 release
+- Operations for core documents, indexes, search, cluster administration, snapshots, security, ML, observability, and supported plugins
+- Basic, bearer-token, and deliberately unauthenticated cluster credential modes
+- OpenSearch error-envelope decoding, typed status failures, retry hints, and redacted secrets
+- A dedicated SDK guide and service announcement with a cluster-health and log-search example
+
+## Repositories
+
+- [`implementation`](https://github.com/kevinmichaelchen/distilled-opensearch) · [`source mirror`](https://github.com/kevinmichaelchen/distilled-spec-opensearch) · [`official specification`](https://github.com/opensearch-project/opensearch-api-specification)
+
+## Verified
+
+The SDK regenerates deterministically from its pinned submodule, typechecks under the strict shared configuration, passes its provider regression test, builds dual Bun/Node exports, and publishes through GitHub OIDC.

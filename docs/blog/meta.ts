@@ -12,6 +12,7 @@ export default defineMeta({
     "announcing-distilled-avalara",
     "announcing-distilled-statsig",
     "announcing-distilled-auth0",
+    "announcing-distilled-opensearch",
     "introducing-distilled",
     "three-apis-three-source-shapes",
   ],

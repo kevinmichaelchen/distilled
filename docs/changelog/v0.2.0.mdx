@@ -1,0 +1,34 @@
+---
+title: v0.2.0
+description: Avalara AvaTax, Statsig, and Auth0 join the Distilled SDK factory.
+type: changelog
+date: 2026-07-15
+changelog:
+  version: 0.2.0
+  category: SDK expansion
+sidebar:
+  label: v0.2.0
+  order: 1
+---
+
+This release expands Distilled from three providers to six while retaining the separate-source, committed-output, independently published architecture learned from Alchemy.
+
+## Packages
+
+- [`@kevinmichaelchen/distilled@0.1.1`](https://www.npmjs.com/package/@kevinmichaelchen/distilled) — deterministic fallback operation IDs for official specs that omit them
+- [`@kevinmichaelchen/distilled-avalara@0.1.0`](https://www.npmjs.com/package/@kevinmichaelchen/distilled-avalara) — 470 Effect-native AvaTax operations
+- [`@kevinmichaelchen/distilled-statsig@0.1.0`](https://www.npmjs.com/package/@kevinmichaelchen/distilled-statsig) — 312 Effect-native Console API operations
+- [`@kevinmichaelchen/distilled-auth0@0.1.0`](https://www.npmjs.com/package/@kevinmichaelchen/distilled-auth0) — 451 Effect-native Management API operations
+
+## Added
+
+- Three immutable source mirrors, each populated only from its vendor's official machine-readable contract
+- AvaTax bearer and account/license-key credential modes
+- Statsig Console API version-header policy
+- Auth0 tenant-aware Management API credentials
+- Regression-tested generator naming for OpenAPI operations without `operationId`
+- Dedicated SDK pages, repository links, npm links, and an architecture field note
+
+## Verified
+
+All three SDKs regenerate deterministically from their pinned submodules, typecheck under the strict shared configuration, pass provider tests, and build dual Bun/Node exports.

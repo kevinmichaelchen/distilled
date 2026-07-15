@@ -1,0 +1,49 @@
+---
+title: Statsig SDK
+description: Effect-native Statsig Console API operations generated from the official versioned OpenAPI document.
+sidebar:
+  icon: flag
+  badge: 0.1.0
+  order: 6
+---
+
+<Badge variant="success">Published</Badge> <Badge>OpenAPI 3</Badge> <Badge>312 operations</Badge>
+
+The Statsig SDK pins the official `20240601` Console API contract and generates every operation through the shared OpenAPI path.
+
+<CodeGroup>
+
+```bash npm
+npm install @kevinmichaelchen/distilled-statsig effect
+```
+
+```bash pnpm
+pnpm add @kevinmichaelchen/distilled-statsig effect
+```
+
+```bash bun
+bun add @kevinmichaelchen/distilled-statsig effect
+```
+
+</CodeGroup>
+
+## Authentication
+
+Set `STATSIG_API_KEY`. The client sends it as `STATSIG-API-KEY` and pins the matching `STATSIG-API-VERSION` header.
+
+## Repositories
+
+<CardGroup cols={2}>
+  <Card title="Implementation" href="https://github.com/kevinmichaelchen/distilled-statsig" icon="code-2">
+    Provider policy and 312 committed Effect operations.
+  </Card>
+  <Card title="Specification" href="https://github.com/kevinmichaelchen/distilled-spec-statsig" icon="file-json">
+    Immutable mirror of Statsig's versioned Console API contract.
+  </Card>
+</CardGroup>
+
+[View the package on npm](https://www.npmjs.com/package/@kevinmichaelchen/distilled-statsig).
+
+:::info
+Statsig's document omits `operationId` on every operation. Distilled derives stable identifiers from the operation tags and summaries, with collision checks, at the shared generator boundary.
+:::

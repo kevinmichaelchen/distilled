@@ -1,0 +1,49 @@
+---
+title: Auth0 SDK
+description: Effect-native Auth0 Management API v2 operations generated from Auth0's official OpenAPI document.
+sidebar:
+  icon: shield-check
+  badge: 0.1.0
+  order: 7
+---
+
+<Badge variant="success">Published</Badge> <Badge>OpenAPI 3.1</Badge> <Badge>451 operations</Badge>
+
+The Auth0 SDK pins the official Management API v2 contract and keeps tenant addressing and bearer-token policy in the handwritten provider layer.
+
+<CodeGroup>
+
+```bash npm
+npm install @kevinmichaelchen/distilled-auth0 effect
+```
+
+```bash pnpm
+pnpm add @kevinmichaelchen/distilled-auth0 effect
+```
+
+```bash bun
+bun add @kevinmichaelchen/distilled-auth0 effect
+```
+
+</CodeGroup>
+
+## Authentication
+
+Set `AUTH0_DOMAIN` and `AUTH0_MANAGEMENT_TOKEN`. The client targets `https://<tenant>/api/v2` and sends the token as bearer authentication.
+
+## Repositories
+
+<CardGroup cols={2}>
+  <Card title="Implementation" href="https://github.com/kevinmichaelchen/distilled-auth0" icon="code-2">
+    Provider policy and 451 committed Effect operations.
+  </Card>
+  <Card title="Specification" href="https://github.com/kevinmichaelchen/distilled-spec-auth0" icon="file-json">
+    Immutable mirror of Auth0's official Management API contract.
+  </Card>
+</CardGroup>
+
+[View the package on npm](https://www.npmjs.com/package/@kevinmichaelchen/distilled-auth0).
+
+:::note
+Four exceptionally large top-level unions intentionally fall back to unknown output. This follows the shared generator's existing size guard and avoids combinatorial schema expansion.
+:::

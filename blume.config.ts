@@ -10,10 +10,10 @@ export default defineConfig({
     href: "/",
   },
   banner: {
-    content: "The first Jira, GitHub, and Slack SDKs are live.",
-    link: { text: "Read the launch note", href: "/blog/introducing-distilled" },
+    content: "Avalara AvaTax, Statsig, and Auth0 have joined the factory.",
+    link: { text: "Read the field note", href: "/blog/three-apis-three-source-shapes" },
     dismissible: true,
-    id: "distilled-0-1",
+    id: "distilled-0-2",
   },
   content: {
     root: "docs",

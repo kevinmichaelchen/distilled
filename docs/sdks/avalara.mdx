@@ -1,0 +1,49 @@
+---
+title: Avalara AvaTax SDK
+description: Effect-native AvaTax REST v2 operations generated from Avalara's official Swagger document.
+sidebar:
+  icon: receipt-text
+  badge: 0.1.0
+  order: 5
+---
+
+<Badge variant="success">Published</Badge> <Badge>Swagger 2</Badge> <Badge>470 operations</Badge>
+
+The Avalara SDK pins the official AvaTax REST v2 Swagger document in a dedicated source repository, then adds only the handwritten authentication, errors, and retry behavior that belong to the provider boundary.
+
+<CodeGroup>
+
+```bash npm
+npm install @kevinmichaelchen/distilled-avalara effect
+```
+
+```bash pnpm
+pnpm add @kevinmichaelchen/distilled-avalara effect
+```
+
+```bash bun
+bun add @kevinmichaelchen/distilled-avalara effect
+```
+
+</CodeGroup>
+
+## Authentication
+
+Use either `AVALARA_BEARER_TOKEN` or the AvaTax account pair `AVALARA_ACCOUNT_ID` and `AVALARA_LICENSE_KEY`. `AVALARA_BASE_URL` can select a sandbox or another AvaTax endpoint.
+
+## Repositories
+
+<CardGroup cols={2}>
+  <Card title="Implementation" href="https://github.com/kevinmichaelchen/distilled-avalara" icon="code-2">
+    Provider policy and 470 committed Effect operations.
+  </Card>
+  <Card title="Specification" href="https://github.com/kevinmichaelchen/distilled-spec-avalara" icon="file-json">
+    Immutable mirror of Avalara's official AvaTax Swagger document.
+  </Card>
+</CardGroup>
+
+[View the package on npm](https://www.npmjs.com/package/@kevinmichaelchen/distilled-avalara).
+
+:::note
+Seven download-oriented operations have unknown response bodies because the upstream Swagger omits JSON schemas for their binary payloads. The generator preserves that absence instead of inventing a model.
+:::

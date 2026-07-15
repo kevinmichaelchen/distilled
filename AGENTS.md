@@ -1,16 +1,11 @@
-# Distilled factory runbook
+# Distilled shared-core runbook
 
-- Keep generation deterministic: identical spec commit plus patches must produce an identical tree.
-- Never modify a mirrored spec from this repository.
-- Add general OpenAPI behavior here; add vendor quirks in the vendor SDK patch layer.
-- Generated files must include `DO NOT EDIT` and be replaced as a complete tree.
-- Any generator bug fix requires a focused fixture or runtime test.
+This repository is a versioned façade over Alchemy's published `@distilled.cloud/core`. Read the source pinned by `package.json` in `node_modules/@distilled.cloud/core` and the matching `alchemy-run/distilled` commit before changing public exports.
 
-## Diagnosis
-
-| Symptom | Change |
-| --- | --- |
-| Wrong wire path/query/header/body | Fix the shared generator or add missing spec metadata via a vendor patch |
-| Wrong generated TypeScript type | Patch the vendor spec first; change the generator only for general OpenAPI semantics |
-| Unknown HTTP response | Add vendor error classification in the SDK repository |
-| Non-deterministic diff | Sort the generator input/output and add a regression test |
+- Do not reimplement Alchemy runtime or generator behavior here.
+- Keep runtime façade modules as direct re-exports.
+- Keep `scripts/generate-openapi.ts` reviewable as a verbatim vendored file; limit local edits to its import path and attribution header.
+- Upgrade `@distilled.cloud/core` deliberately and regenerate every vendor SDK in the same change set.
+- This project uses Effect 4. Verify APIs against the installed source; do not infer them from Effect 3.
+- Vendor behavior belongs in the vendor SDK's credentials, client, errors, retry service, or patch files.
+- Mirrored upstream specifications are immutable and live in separate `distilled-spec-*` repositories.

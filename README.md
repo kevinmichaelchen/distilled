@@ -1,13 +1,12 @@
 # distilled
 
-The shared runtime and deterministic generator for Effect-native SDKs.
+Shared infrastructure for Kevin's standalone Distilled SDK repositories.
 
-The factory reads an immutable vendor OpenAPI snapshot, applies ordered RFC 6902 patches in memory, and emits:
+This package intentionally pins and re-exports `@distilled.cloud/core@0.29.0`, the runtime maintained in Alchemy's `distilled` monorepo. Keeping the façade thin gives the standalone repositories the topology requested here while preserving Alchemy's actual Effect 4 behavior:
 
-- OpenAPI-derived TypeScript types.
-- One Effect-returning function per `operationId`.
-- A stable operation manifest for review and coverage tooling.
+- Runtime `Schema.Codec` request and response validation.
+- HTTP traits consumed by `API.make` and `API.makePaginated`.
+- Yieldable operations, pagination streams, retry policies, categorized errors, sensitive fields, tracing, and debug logging.
+- Deterministic OpenAPI 2/3 generation with documented RFC 6902 patch envelopes.
 
-Vendor knowledge belongs in SDK-repository patches and handwritten policy, never in a spec mirror.
-
-This bootstrap targets stable Effect 3. Effect 4 is still published under npm's `beta` tag as of July 2026, so adopting it is intentionally deferred until the runtime API is stable.
+Vendor repositories import subpaths such as `@kevinmichaelchen/distilled/client` and `@kevinmichaelchen/distilled/openapi/generate`. No forked runtime code lives here. `scripts/generate-openapi.ts` is vendored verbatim from audited Alchemy commit `bf5f2b4` because `@distilled.cloud/core@0.29.0` declares that export but omits `scripts/` from its published npm files. Upgrades are deliberate diffs against Alchemy's source.

@@ -1779,10 +1779,11 @@ export function generateFromOpenAPI(config: GeneratorConfig): void {
     process.exit(1);
   }
 
-  // Create output directory
-  if (!fs.existsSync(outputDir)) {
-    fs.mkdirSync(outputDir, { recursive: true });
-  }
+  // Generated operations are a complete projection of the patched spec.
+  // Recreate the directory so removed and case-renamed operations cannot
+  // survive a later generation pass as stale modules.
+  fs.rmSync(outputDir, { recursive: true, force: true });
+  fs.mkdirSync(outputDir, { recursive: true });
 
   // Status-to-error-class mapping
   const statusToErrorClass = config.statusToErrorClass ?? {

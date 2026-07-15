@@ -32,8 +32,9 @@ describe("OpenAPI generator adaptations", () => {
     }));
 
     await generateFromOpenAPI({ specPath, patchDir, outputDir, importPrefix: ".." });
-    const generated = await readFile(join(outputDir, "teamsget.ts"), "utf8");
+    const generated = await readFile(join(outputDir, "teamsGet.ts"), "utf8");
     expect(generated).toContain('"enterprise-team": Schema.String.pipe(T.PathParam())');
+    expect(generated).toContain("export const teamsGet");
   });
 
   test("derives stable operation names when a vendor omits operationId", async () => {
@@ -58,8 +59,8 @@ describe("OpenAPI generator adaptations", () => {
     }));
 
     await generateFromOpenAPI({ specPath, patchDir, outputDir, importPrefix: ".." });
-    const generated = await readFile(join(outputDir, "AlertsListToplineAlerts.ts"), "utf8");
-    expect(generated).toContain("export const AlertsListToplineAlerts");
+    const generated = await readFile(join(outputDir, "alertsListToplineAlerts.ts"), "utf8");
+    expect(generated).toContain("export const alertsListToplineAlerts");
     expect(generated).toContain('path: "/console/v1/alerts"');
   });
 });

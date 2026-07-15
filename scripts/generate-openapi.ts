@@ -228,9 +228,10 @@ function capitalize(s: string): string {
 }
 
 function toCamelCase(s: string): string {
-  return s
-    .replace(/[-_\s]+([a-zA-Z])/g, (_, c) => c.toUpperCase())
+  const camel = s
+    .replace(/[-_.\s/]+([a-zA-Z0-9])/g, (_, c) => c.toUpperCase())
     .replace(/[^a-zA-Z0-9$]/g, "");
+  return camel.charAt(0).toLowerCase() + camel.slice(1);
 }
 
 function toPascalCase(s: string): string {

@@ -1,26 +1,34 @@
 {
   "name": "@kevinmichaelchen/distilled",
   "version": "0.0.0",
-  "private": true,
+  "description": "Effect 4 runtime and generators for the Distilled SDK factory",
   "type": "module",
   "license": "Apache-2.0",
+  "sideEffects": false,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kevinmichaelchen/distilled.git"
+  },
+  "files": ["lib", "src", "scripts"],
+  "publishConfig": { "access": "public" },
   "exports": {
-    ".": "./src/index.ts",
-    "./category": "./src/category.ts",
-    "./client": "./src/client.ts",
-    "./errors": "./src/errors.ts",
-    "./json-patch": "./src/json-patch.ts",
-    "./pagination": "./src/pagination.ts",
-    "./retry": "./src/retry.ts",
-    "./retry-after": "./src/retry-after.ts",
-    "./schema": "./src/schema.ts",
-    "./schemas": "./src/schemas.ts",
-    "./sensitive": "./src/sensitive.ts",
-    "./traits": "./src/traits.ts",
-    "./openapi/generate": "./scripts/generate-openapi.ts"
+    ".": { "types": "./lib/index.d.ts", "bun": "./src/index.ts", "default": "./lib/index.js" },
+    "./category": { "types": "./lib/category.d.ts", "bun": "./src/category.ts", "default": "./lib/category.js" },
+    "./client": { "types": "./lib/client.d.ts", "bun": "./src/client.ts", "default": "./lib/client.js" },
+    "./errors": { "types": "./lib/errors.d.ts", "bun": "./src/errors.ts", "default": "./lib/errors.js" },
+    "./json-patch": { "types": "./lib/json-patch.d.ts", "bun": "./src/json-patch.ts", "default": "./lib/json-patch.js" },
+    "./pagination": { "types": "./lib/pagination.d.ts", "bun": "./src/pagination.ts", "default": "./lib/pagination.js" },
+    "./retry": { "types": "./lib/retry.d.ts", "bun": "./src/retry.ts", "default": "./lib/retry.js" },
+    "./retry-after": { "types": "./lib/retry-after.d.ts", "bun": "./src/retry-after.ts", "default": "./lib/retry-after.js" },
+    "./schema": { "types": "./lib/schema.d.ts", "bun": "./src/schema.ts", "default": "./lib/schema.js" },
+    "./schemas": { "types": "./lib/schemas.d.ts", "bun": "./src/schemas.ts", "default": "./lib/schemas.js" },
+    "./sensitive": { "types": "./lib/sensitive.d.ts", "bun": "./src/sensitive.ts", "default": "./lib/sensitive.js" },
+    "./traits": { "types": "./lib/traits.d.ts", "bun": "./src/traits.ts", "default": "./lib/traits.js" },
+    "./openapi/generate": { "bun": "./scripts/generate-openapi.ts", "default": "./scripts/generate-openapi.ts" }
   },
   "scripts": {
     "check": "bun run typecheck && bun test",
+    "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
     "test": "bun test"
   },

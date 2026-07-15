@@ -67,7 +67,7 @@ import * as Layer from "effect/Layer";
 import * as FetchHttpClient from "effect/unstable/http/FetchHttpClient";
 import {
   CredentialsFromEnv,
-  clusterhealth0,
+  clusterHealth0,
   search2,
 } from "@kevinmichaelchen/distilled-opensearch";
 
@@ -77,7 +77,7 @@ const OpenSearchLive = Layer.mergeAll(
 );
 
 const program = Effect.gen(function* () {
-  const health = yield* clusterhealth0({ wait_for_status: "yellow" });
+  const health = yield* clusterHealth0({ wait_for_status: "yellow" });
   const errors = yield* search2({
     index: "application-logs-*",
     q: "level:error AND service:checkout",
@@ -93,6 +93,8 @@ const result = await Effect.runPromise(
 ```
 
 The same package can create indexes and mappings, index or update documents, run Query DSL searches and aggregations, manage snapshots, inspect nodes, and call supported plugin APIs.
+
+OpenSearch's dotted operation IDs become ordinary TypeScript camelCase names, so `cluster.health.0` is exported as `clusterHealth0`. Numeric suffixes remain because the official specification models each HTTP method and path form as a distinct operation; for example, `search2` is the indexed `GET /{index}/_search` variant.
 
 ## Available now
 

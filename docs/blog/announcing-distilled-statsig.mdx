@@ -65,12 +65,12 @@ import * as Layer from "effect/Layer";
 import * as FetchHttpClient from "effect/unstable/http/FetchHttpClient";
 import {
   CredentialsFromEnv,
-  GatesListGates,
+  gatesListGates,
 } from "@kevinmichaelchen/distilled-statsig";
 
 const StatsigLive = Layer.mergeAll(FetchHttpClient.layer, CredentialsFromEnv);
 
-const temporaryGates = GatesListGates({
+const temporaryGates = gatesListGates({
   type: "TEMPORARY",
   includeArchived: "false",
   limit: 100,
@@ -80,6 +80,8 @@ const result = await Effect.runPromise(Effect.provide(temporaryGates, StatsigLiv
 ```
 
 The same package can create gates, manage rules and overrides, start experiments, retrieve pulse results, and coordinate release pipelines—without changing runtime conventions.
+
+Because Statsig omits operation IDs, Distilled derives these names from tags and summaries. The shared generator normalizes them to lower camelCase while retaining collision detection and deterministic output.
 
 ## Available now
 

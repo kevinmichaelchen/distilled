@@ -3,13 +3,15 @@ title: Avalara AvaTax SDK
 description: Effect-native AvaTax REST v2 operations generated from Avalara's official Swagger document.
 sidebar:
   icon: receipt-text
-  badge: 0.1.1
+  badge: 0.1.2
   order: 5
 ---
 
 <Badge variant="success">Published</Badge> <Badge>Swagger 2</Badge> <Badge>470 operations</Badge>
 
 The Avalara SDK pins the official AvaTax REST v2 Swagger document in a dedicated source repository, then adds only the handwritten authentication, errors, and retry behavior that belong to the provider boundary.
+
+Operations use lower camelCase TypeScript names such as `taxRatesByAddress`, `createTransaction`, and `ping`, while generated schemas and types remain PascalCase.
 
 <CodeGroup>
 

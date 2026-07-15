@@ -37,6 +37,8 @@ The result is more than autocomplete: API boundary failures remain explicit valu
   <Step title="Publish independently">Generated output is committed, CI proves deterministic regeneration, and GitHub OIDC publishes without an npm token.</Step>
 </Steps>
 
+The shared generator also normalizes Atlassian's handful of Java-style dotted operation IDs into the same lower camelCase convention used by the rest of the Jira surface. That policy stays in the common factory rather than becoming a Jira-only collection of aliases.
+
 ## Find unresolved issues in a project
 
 Set `JIRA_BASE_URL`, `JIRA_EMAIL`, and `JIRA_API_TOKEN`, then install the package:

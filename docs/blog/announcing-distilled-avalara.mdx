@@ -65,12 +65,12 @@ import * as Layer from "effect/Layer";
 import * as FetchHttpClient from "effect/unstable/http/FetchHttpClient";
 import {
   CredentialsFromEnv,
-  TaxRatesByAddress,
+  taxRatesByAddress,
 } from "@kevinmichaelchen/distilled-avalara";
 
 const AvaTaxLive = Layer.mergeAll(FetchHttpClient.layer, CredentialsFromEnv);
 
-const estimate = TaxRatesByAddress({
+const estimate = taxRatesByAddress({
   line1: "100 Market Street",
   city: "Philadelphia",
   region: "PA",
@@ -81,7 +81,7 @@ const estimate = TaxRatesByAddress({
 const rates = await Effect.runPromise(Effect.provide(estimate, AvaTaxLive));
 ```
 
-`TaxRatesByAddress` is useful for approximation. For a production calculation that accounts for nexus, sourcing, product taxability, exemptions, and document lifecycle, use the generated `CreateTransaction` operation.
+`taxRatesByAddress` is useful for approximation. For a production calculation that accounts for nexus, sourcing, product taxability, exemptions, and document lifecycle, use the generated `createTransaction` operation. All operation functions use lower camelCase; their input and output schemas use PascalCase.
 
 ## Available now
 

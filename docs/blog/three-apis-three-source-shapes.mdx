@@ -49,10 +49,10 @@ Tax integrations are broad, consequential, and full of operational edge cases. [
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as FetchHttpClient from "effect/unstable/http/FetchHttpClient";
-import { CredentialsFromEnv, Ping } from "@kevinmichaelchen/distilled-avalara";
+import { CredentialsFromEnv, ping } from "@kevinmichaelchen/distilled-avalara";
 
 const AvaTaxLive = Layer.mergeAll(FetchHttpClient.layer, CredentialsFromEnv);
-const connection = await Effect.runPromise(Effect.provide(Ping({}), AvaTaxLive));
+const connection = await Effect.runPromise(Effect.provide(ping({}), AvaTaxLive));
 ```
 
 Statsig brings the same model to feature-management automation: typed Console API operations, a pinned API version, and composable failure handling. Auth0 does it for tenant administration, where identity-management changes benefit from validated responses and explicit, observable errors.

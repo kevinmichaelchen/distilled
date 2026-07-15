@@ -1,0 +1,44 @@
+---
+title: v0.4.0
+description: Generated operation names are now idiomatic lower camelCase across every Distilled OpenAPI SDK.
+type: changelog
+date: 2026-07-15
+changelog:
+  version: 0.4.0
+  category: Generator quality
+sidebar:
+  label: v0.4.0
+  order: 1
+---
+
+This release makes provider operation identifiers read naturally in TypeScript while retaining Alchemy's shared-generator, pinned-spec, committed-output architecture.
+
+## Packages
+
+- [`@kevinmichaelchen/distilled@0.1.3`](https://www.npmjs.com/package/@kevinmichaelchen/distilled) — normalized operation naming plus stale-output cleanup
+- [`@kevinmichaelchen/distilled-avalara@0.1.2`](https://www.npmjs.com/package/@kevinmichaelchen/distilled-avalara) — lower camelCase AvaTax operations
+- [`@kevinmichaelchen/distilled-jira@0.1.2`](https://www.npmjs.com/package/@kevinmichaelchen/distilled-jira) — normalized dotted Atlassian operation IDs
+- [`@kevinmichaelchen/distilled-opensearch@0.1.2`](https://www.npmjs.com/package/@kevinmichaelchen/distilled-opensearch) — namespace-aware OpenSearch operation casing
+- [`@kevinmichaelchen/distilled-statsig@0.1.2`](https://www.npmjs.com/package/@kevinmichaelchen/distilled-statsig) — lower camelCase names derived from tags and summaries
+
+## Changed
+
+- Dots, slashes, hyphens, underscores, and whitespace now form deterministic camelCase word boundaries.
+- Operation functions begin with a lowercase character; generated schema and type names remain PascalCase.
+- Generated directories are recreated on every run so removed or case-renamed operations cannot survive as stale modules.
+- Avalara, Jira, OpenSearch, and Statsig were regenerated. Auth0, GitHub REST, and Slack already produced idiomatic names and did not require package releases.
+
+This is intentionally a breaking cleanup with no deprecated aliases. The packages have no known consumers, so carrying the malformed names forward would add complexity without protecting real users.
+
+## Examples
+
+- AvaTax: `TaxRatesByAddress` → `taxRatesByAddress`
+- Statsig: `GatesListGates` → `gatesListGates`
+- OpenSearch: `clusterhealth0` → `clusterHealth0`
+- Jira: `AddonPropertiesResource.getAddonProperties_get` → `addonPropertiesResourceGetAddonPropertiesGet`
+
+Official numeric OpenSearch route suffixes remain. They distinguish separate path and HTTP-method variants in the source contract; the generator does not invent overloads or merge operations.
+
+## Verified
+
+Every affected SDK regenerates from its pinned source, typechecks, passes provider tests, builds its publishable output, and is released independently through GitHub OIDC trusted publishing.

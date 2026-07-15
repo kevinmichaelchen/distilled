@@ -3,7 +3,7 @@ title: Statsig SDK
 description: Effect-native Statsig Console API operations generated from the official versioned OpenAPI document.
 sidebar:
   icon: flag
-  badge: 0.1.1
+  badge: 0.1.2
   order: 6
 ---
 
@@ -46,4 +46,5 @@ Set `STATSIG_API_KEY`. The client sends it as `STATSIG-API-KEY` and pins the mat
 
 :::info
 Statsig's document omits `operationId` on every operation. Distilled derives stable identifiers from the operation tags and summaries, with collision checks, at the shared generator boundary.
+Derived operation exports use lower camelCase, such as `gatesListGates` and `alertsListToplineAlerts`.
 :::

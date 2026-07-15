@@ -1,17 +1,17 @@
 ---
 title: Jira SDK
-description: Effect-native Jira Cloud Platform operations generated from Atlassian OpenAPI.
+description: Install, authenticate, and search Jira Cloud with Effect-native operations generated from Atlassian OpenAPI.
 sidebar:
   icon: ticket-check
   badge: 0.1.2
-  order: 2
+  order: 3
 ---
 
-<Badge variant="success">Published</Badge> <Badge>OpenAPI</Badge>
+<Badge variant="success">Public package</Badge> <Badge>OpenAPI</Badge> <Badge>587 operations</Badge>
 
-The Jira SDK mirrors Atlassian's authoritative OpenAPI document in a dedicated spec repository, pins that mirror as a submodule, applies documented patches, and generates Effect operations through the shared factory.
+The Jira SDK turns Atlassian's authoritative OpenAPI document into yieldable Effect operations with validated responses, typed failures, tracing, and retry policy.
 
-Operation identifiers are normalized consistently across Atlassian's ordinary camelCase IDs and its small Java-style dotted subset, producing lower camelCase exports throughout.
+## Install
 
 <CodeGroup>
 
@@ -29,19 +29,54 @@ bun add @kevinmichaelchen/distilled-jira effect
 
 </CodeGroup>
 
-## Repositories
+## Authentication
 
-<CardGroup cols={2}>
-  <Card title="Implementation" href="https://github.com/kevinmichaelchen/distilled-jira" icon="code-2">
+| Variable | Purpose |
+| --- | --- |
+| `JIRA_BASE_URL` | Jira Cloud site, such as `https://acme.atlassian.net` |
+| `JIRA_EMAIL` | Atlassian account email |
+| `JIRA_API_TOKEN` | Atlassian API token |
+
+## Quickstart
+
+Search for the highest-priority unresolved issues in a project:
+
+```ts
+import * as Effect from "effect/Effect";
+import * as Layer from "effect/Layer";
+import * as FetchHttpClient from "effect/unstable/http/FetchHttpClient";
+import {
+  CredentialsFromEnv,
+  searchAndReconcileIssuesUsingJql,
+} from "@kevinmichaelchen/distilled-jira";
+
+const JiraLive = Layer.mergeAll(FetchHttpClient.layer, CredentialsFromEnv);
+
+const program = searchAndReconcileIssuesUsingJql({
+  jql: 'project = "PAY" AND resolution = Unresolved ORDER BY priority DESC',
+  fields: ["summary", "status", "priority", "assignee"],
+  maxResults: 50,
+});
+
+const issues = await Effect.runPromise(Effect.provide(program, JiraLive));
+```
+
+:::tip[One layer, the whole Jira API]
+The same layer can create and transition issues, add comments, manage projects and workflows, inspect permissions, administer fields, and automate users, filters, and dashboards. [See three common Jira workflows](/blog/announcing-distilled-jira#code-examples).
+:::
+
+## Source and package
+
+<CardGroup cols={3}>
+  <Card title="npm package" href="https://www.npmjs.com/package/@kevinmichaelchen/distilled-jira" icon="package-open">
+    Public package, generated source, declarations, and release history.
+  </Card>
+  <Card title="Implementation (private)" href="https://github.com/kevinmichaelchen/distilled-jira" icon="lock-keyhole">
     Credentials, patches, errors, retries, tests, and generated operations.
   </Card>
-  <Card title="Specification" href="https://github.com/kevinmichaelchen/distilled-spec-jira" icon="file-json">
-    Immutable mirror of the official Atlassian OpenAPI source.
+  <Card title="Specification (private)" href="https://github.com/kevinmichaelchen/distilled-spec-jira" icon="lock-keyhole">
+    Immutable mirror of Atlassian's official OpenAPI source.
   </Card>
 </CardGroup>
 
-[View the package on npm](https://www.npmjs.com/package/@kevinmichaelchen/distilled-jira).
-
-## Why a spec repository?
-
-Atlassian publishes a maintained OpenAPI artifact that is compact enough to mirror directly. Isolating it gives the SDK a stable, exact source pin and makes upstream refreshes explicit.
+Atlassian's small Java-style dotted operation-ID subset is normalized alongside its ordinary camelCase IDs, producing lower camelCase exports throughout.

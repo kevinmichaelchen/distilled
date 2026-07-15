@@ -10,10 +10,10 @@ export default defineConfig({
     href: "/",
   },
   banner: {
-    content: "Avalara AvaTax, Statsig, and Auth0 have joined the factory.",
-    link: { text: "Read the field note", href: "/blog/three-apis-three-source-shapes" },
+    content: "Seven Effect-native API SDKs are live.",
+    link: { text: "Explore the catalog", href: "/sdks" },
     dismissible: true,
-    id: "distilled-0-2",
+    id: "distilled-seven-sdks",
   },
   content: {
     root: "docs",
@@ -32,7 +32,6 @@ export default defineConfig({
     ],
     featured: [
       { label: "Blog", href: "/blog", icon: "newspaper" },
-      { label: "Changelog", href: "/changelog", icon: "history" },
     ],
     sidebar: { display: "group" },
   },

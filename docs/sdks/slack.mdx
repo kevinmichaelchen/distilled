@@ -1,15 +1,17 @@
 ---
 title: Slack SDK
-description: Effect-native Slack Web API operations generated from Slack's official TypeScript SDK.
+description: Install, authenticate, and automate Slack with Effect-native operations derived from Slack's official TypeScript SDK.
 sidebar:
   icon: message-square
   badge: 0.1.0
-  order: 4
+  order: 5
 ---
 
-<Badge variant="success">Published</Badge> <Badge variant="accent">Typed source</Badge>
+<Badge variant="success">Public package</Badge> <Badge variant="accent">Typed source</Badge> <Badge>268 operations</Badge>
 
-Slack does not provide a maintained OpenAPI document suitable for this factory. Instead, the implementation pins `slackapi/node-slack-sdk` directly and derives its Web API surface with a provider-specific TypeScript AST generator.
+Slack does not publish a maintained OpenAPI document suitable for this factory. Distilled instead pins Slack's official TypeScript SDK and derives its Web API surface with a provider-specific AST generator.
+
+## Install
 
 <CodeGroup>
 
@@ -27,19 +29,49 @@ bun add @kevinmichaelchen/distilled-slack effect
 
 </CodeGroup>
 
-## Repositories
+## Authentication
 
-<CardGroup cols={2}>
-  <Card title="Implementation" href="https://github.com/kevinmichaelchen/distilled-slack" icon="code-2">
-    Pinned Slack source, AST generator, rate-limit categories, and operations.
+Set `SLACK_TOKEN` to a bot, user, or app-level token with the scopes required by the operations you call.
+
+## Quickstart
+
+Post a message to a channel:
+
+```ts
+import * as Effect from "effect/Effect";
+import * as Layer from "effect/Layer";
+import {
+  chatPostMessage,
+  CredentialsFromEnv,
+  SlackClientLive,
+} from "@kevinmichaelchen/distilled-slack";
+
+const SlackLive = SlackClientLive.pipe(Layer.provide(CredentialsFromEnv));
+
+const program = chatPostMessage({
+  channel: "C01234567",
+  text: "The release is live :tada:",
+});
+
+const message = await Effect.runPromise(Effect.provide(program, SlackLive));
+```
+
+:::tip[One layer, the whole Slack Web API]
+The same layer can read threads and history, manage channels, resolve users, upload files, add reactions, publish views, run workflows, and automate workspace administration. [See three common Slack workflows](/blog/announcing-distilled-slack#code-examples).
+:::
+
+## Source and package
+
+<CardGroup cols={3}>
+  <Card title="npm package" href="https://www.npmjs.com/package/@kevinmichaelchen/distilled-slack" icon="package-open">
+    Public package, generated source, declarations, and release history.
+  </Card>
+  <Card title="Implementation (private)" href="https://github.com/kevinmichaelchen/distilled-slack" icon="lock-keyhole">
+    Pinned upstream source, AST generator, errors, and rate-limit policy.
   </Card>
   <Card title="Official upstream" href="https://github.com/slackapi/node-slack-sdk" icon="external-link">
-    Slack's authoritative typed SDK and method definitions.
+    Slack's public typed SDK and Web API method definitions.
   </Card>
 </CardGroup>
 
-[View the package on npm](https://www.npmjs.com/package/@kevinmichaelchen/distilled-slack).
-
-## Why there is no distilled-spec-slack
-
-The official source repository is already the compact, authoritative typed input. A second mirror would add indirection without adding curation, stability, or reviewability.
+There is no `distilled-spec-slack`: the official typed repository is already the authoritative input, so a second mirror would add indirection without adding stability.

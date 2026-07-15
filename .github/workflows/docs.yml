@@ -1,11 +1,14 @@
 name: Deploy documentation
 
 on:
+  schedule:
+    - cron: "17 13 * * 1"
   push:
     branches: [main]
     paths:
       - ".github/workflows/docs.yml"
       - "docs/**"
+      - "scripts/sdk-docs.ts"
       - "public/**"
       - "blume.config.ts"
       - "theme.css"
@@ -39,6 +42,7 @@ jobs:
         with:
           enablement: true
       - run: bun install --frozen-lockfile
+      - run: bun run docs:check:registry
       - run: bun run docs:build
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

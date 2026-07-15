@@ -1,15 +1,17 @@
 ---
 title: Auth0 SDK
-description: Effect-native Auth0 Management API v2 operations generated from Auth0's official OpenAPI document.
+description: Install, authenticate, and administer Auth0 with Effect-native Management API v2 operations.
 sidebar:
   icon: shield-check
   badge: 0.1.1
-  order: 7
+  order: 8
 ---
 
-<Badge variant="success">Published</Badge> <Badge>OpenAPI 3.1</Badge> <Badge>451 operations</Badge>
+<Badge variant="success">Public package</Badge> <Badge>OpenAPI 3.1</Badge> <Badge>451 operations</Badge>
 
-The Auth0 SDK pins the official Management API v2 contract and keeps tenant addressing and bearer-token policy in the handwritten provider layer.
+The Auth0 SDK pins the official Management API v2 contract and keeps tenant addressing, bearer authentication, secret redaction, errors, and retries in the handwritten provider layer.
+
+## Install
 
 <CodeGroup>
 
@@ -29,21 +31,55 @@ bun add @kevinmichaelchen/distilled-auth0 effect
 
 ## Authentication
 
-Set `AUTH0_DOMAIN` and `AUTH0_MANAGEMENT_TOKEN`. The client targets `https://<tenant>/api/v2` and sends the token as bearer authentication.
+| Variable | Purpose |
+| --- | --- |
+| `AUTH0_DOMAIN` | Tenant domain, such as `acme.us.auth0.com` |
+| `AUTH0_MANAGEMENT_TOKEN` | Management API bearer token with the required scopes |
 
-## Repositories
+## Quickstart
 
-<CardGroup cols={2}>
-  <Card title="Implementation" href="https://github.com/kevinmichaelchen/distilled-auth0" icon="code-2">
-    Provider policy and 451 committed Effect operations.
+Find blocked users requiring support or security follow-up:
+
+```ts
+import * as Effect from "effect/Effect";
+import * as Layer from "effect/Layer";
+import * as FetchHttpClient from "effect/unstable/http/FetchHttpClient";
+import {
+  CredentialsFromEnv,
+  getUsers,
+} from "@kevinmichaelchen/distilled-auth0";
+
+const Auth0Live = Layer.mergeAll(FetchHttpClient.layer, CredentialsFromEnv);
+
+const program = getUsers({
+  q: "blocked:true",
+  search_engine: "v3",
+  fields: "user_id,email,blocked,last_login",
+  include_fields: true,
+  per_page: 50,
+});
+
+const users = await Effect.runPromise(Effect.provide(program, Auth0Live));
+```
+
+:::tip[One layer, the whole Auth0 Management API]
+The same layer can manage roles, permissions, organizations, connections, applications, sessions, refresh tokens, tenant settings, and logs. [See three common Auth0 workflows](/blog/announcing-distilled-auth0#code-examples).
+:::
+
+## Source and package
+
+<CardGroup cols={3}>
+  <Card title="npm package" href="https://www.npmjs.com/package/@kevinmichaelchen/distilled-auth0" icon="package-open">
+    Public package, generated source, declarations, and release history.
   </Card>
-  <Card title="Specification" href="https://github.com/kevinmichaelchen/distilled-spec-auth0" icon="file-json">
-    Immutable mirror of Auth0's official Management API contract.
+  <Card title="Implementation (private)" href="https://github.com/kevinmichaelchen/distilled-auth0" icon="lock-keyhole">
+    Tenant-aware policy and 451 committed Effect operations.
+  </Card>
+  <Card title="Specification (private)" href="https://github.com/kevinmichaelchen/distilled-spec-auth0" icon="lock-keyhole">
+    Immutable mirror of Auth0's Management API contract.
   </Card>
 </CardGroup>
 
-[View the package on npm](https://www.npmjs.com/package/@kevinmichaelchen/distilled-auth0).
-
 :::note
-Four exceptionally large top-level unions intentionally fall back to unknown output. This follows the shared generator's existing size guard and avoids combinatorial schema expansion.
+Four exceptionally large top-level unions intentionally fall back to unknown output. This follows the shared generator's size guard and avoids unstable combinatorial schema expansion.
 :::

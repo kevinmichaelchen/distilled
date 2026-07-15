@@ -1,17 +1,17 @@
 ---
 title: Avalara AvaTax SDK
-description: Effect-native AvaTax REST v2 operations generated from Avalara's official Swagger document.
+description: Install, authenticate, and calculate tax with Effect-native AvaTax REST v2 operations.
 sidebar:
   icon: receipt-text
   badge: 0.1.2
-  order: 5
+  order: 6
 ---
 
-<Badge variant="success">Published</Badge> <Badge>Swagger 2</Badge> <Badge>470 operations</Badge>
+<Badge variant="success">Public package</Badge> <Badge>Swagger 2</Badge> <Badge>470 operations</Badge>
 
-The Avalara SDK pins the official AvaTax REST v2 Swagger document in a dedicated source repository, then adds only the handwritten authentication, errors, and retry behavior that belong to the provider boundary.
+The AvaTax SDK pins Avalara's official REST v2 Swagger document and adds only the authentication, error, retry, and client-header behavior that belongs at the provider boundary.
 
-Operations use lower camelCase TypeScript names such as `taxRatesByAddress`, `createTransaction`, and `ping`, while generated schemas and types remain PascalCase.
+## Install
 
 <CodeGroup>
 
@@ -31,21 +31,56 @@ bun add @kevinmichaelchen/distilled-avalara effect
 
 ## Authentication
 
-Use either `AVALARA_BEARER_TOKEN` or the AvaTax account pair `AVALARA_ACCOUNT_ID` and `AVALARA_LICENSE_KEY`. `AVALARA_BASE_URL` can select a sandbox or another AvaTax endpoint.
+| Variable | Purpose |
+| --- | --- |
+| `AVALARA_BEARER_TOKEN` | Preferred bearer credential when available |
+| `AVALARA_ACCOUNT_ID` + `AVALARA_LICENSE_KEY` | AvaTax account credential pair |
+| `AVALARA_BASE_URL` | Optional endpoint; use `https://sandbox-rest.avatax.com` for sandbox |
 
-## Repositories
+## Quickstart
 
-<CardGroup cols={2}>
-  <Card title="Implementation" href="https://github.com/kevinmichaelchen/distilled-avalara" icon="code-2">
+Estimate the combined rate for an address:
+
+```ts
+import * as Effect from "effect/Effect";
+import * as Layer from "effect/Layer";
+import * as FetchHttpClient from "effect/unstable/http/FetchHttpClient";
+import {
+  CredentialsFromEnv,
+  taxRatesByAddress,
+} from "@kevinmichaelchen/distilled-avalara";
+
+const AvaTaxLive = Layer.mergeAll(FetchHttpClient.layer, CredentialsFromEnv);
+
+const program = taxRatesByAddress({
+  line1: "100 Market Street",
+  city: "Philadelphia",
+  region: "PA",
+  postalCode: "19106",
+  country: "US",
+});
+
+const rates = await Effect.runPromise(Effect.provide(program, AvaTaxLive));
+```
+
+:::tip[One layer, the whole AvaTax API]
+The same layer can validate addresses, create and reconcile transactions, manage nexus, exemptions and certificates, inspect jurisdictions, and automate filings and reports. [See three common AvaTax workflows](/blog/announcing-distilled-avalara#code-examples).
+:::
+
+## Source and package
+
+<CardGroup cols={3}>
+  <Card title="npm package" href="https://www.npmjs.com/package/@kevinmichaelchen/distilled-avalara" icon="package-open">
+    Public package, generated source, declarations, and release history.
+  </Card>
+  <Card title="Implementation (private)" href="https://github.com/kevinmichaelchen/distilled-avalara" icon="lock-keyhole">
     Provider policy and 470 committed Effect operations.
   </Card>
-  <Card title="Specification" href="https://github.com/kevinmichaelchen/distilled-spec-avalara" icon="file-json">
-    Immutable mirror of Avalara's official AvaTax Swagger document.
+  <Card title="Specification (private)" href="https://github.com/kevinmichaelchen/distilled-spec-avalara" icon="lock-keyhole">
+    Immutable mirror of Avalara's official Swagger document.
   </Card>
 </CardGroup>
 
-[View the package on npm](https://www.npmjs.com/package/@kevinmichaelchen/distilled-avalara).
-
 :::note
-Seven download-oriented operations have unknown response bodies because the upstream Swagger omits JSON schemas for their binary payloads. The generator preserves that absence instead of inventing a model.
+Seven download-oriented operations have unknown response bodies because the upstream Swagger omits schemas for their binary payloads. Distilled preserves that absence instead of inventing a model.
 :::

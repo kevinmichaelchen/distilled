@@ -16,11 +16,12 @@ See [ARCHITECTURE.md](./ARCHITECTURE.md) for the source-strategy decision rule a
 ## Documentation
 
 The Distilled software factory, SDK catalog, architecture guides, blog, and
-changelog are prepared for
+changelog are published at
 [kevinmichaelchen.github.io/distilled](https://kevinmichaelchen.github.io/distilled/).
-GitHub Pages deployment is gated by repository variable
-`ENABLE_GITHUB_PAGES` because the owner's current plan does not support Pages
-for private repositories.
+GitHub Pages deployment is gated by the repository variable
+`ENABLE_GITHUB_PAGES`.
 
 Run `bun run docs:dev` to work on the Blume site locally, or
 `bun run docs:build` to produce the static site in `dist/`.
+`docs/sdk-manifest.json` is the canonical source for public SDK versions and
+operation counts; run `bun run docs:generate` after changing it.

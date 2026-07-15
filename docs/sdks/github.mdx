@@ -1,17 +1,17 @@
 ---
 title: GitHub SDK
-description: Effect-native GitHub REST operations generated from GitHub's versioned OpenAPI bundle.
+description: Install, authenticate, and automate GitHub with Effect-native REST operations.
 sidebar:
   icon: github
   badge: 0.1.2
-  order: 3
+  order: 4
 ---
 
-<Badge variant="success">Published</Badge> <Badge>OpenAPI 3</Badge>
+<Badge variant="success">Public package</Badge> <Badge>OpenAPI 3</Badge> <Badge>1,167 operations</Badge>
 
-GitHub maintains its REST API description in a large upstream repository. The spec mirror contains only the exact versioned bundle consumed by generation, avoiding an impractical downstream submodule while preserving authority.
+The GitHub SDK generates the versioned REST surface from GitHub's official OpenAPI bundle while keeping authentication, errors, rate-limit handling, and retries in a small handwritten boundary.
 
-Slash-delimited operation IDs become lower camelCase exports such as `reposGet`, `issuesListForRepo`, and `pullsCreate`.
+## Install
 
 <CodeGroup>
 
@@ -29,19 +29,58 @@ bun add @kevinmichaelchen/distilled-github effect
 
 </CodeGroup>
 
-## Repositories
+## Authentication
 
-<CardGroup cols={2}>
-  <Card title="Implementation" href="https://github.com/kevinmichaelchen/distilled-github" icon="code-2">
-    GitHub-specific runtime wiring and thousands of generated REST operations.
+| Variable | Purpose |
+| --- | --- |
+| `GITHUB_TOKEN` | Fine-grained personal token, installation token, or Actions token |
+| `GITHUB_API_URL` | Optional GitHub Enterprise Server API URL |
+| `GITHUB_API_VERSION` | Optional explicit REST API version |
+
+## Quickstart
+
+List recently updated open issues carrying the `bug` label:
+
+```ts
+import * as Effect from "effect/Effect";
+import * as Layer from "effect/Layer";
+import * as FetchHttpClient from "effect/unstable/http/FetchHttpClient";
+import {
+  CredentialsFromEnv,
+  issuesListForRepo,
+} from "@kevinmichaelchen/distilled-github";
+
+const GitHubLive = Layer.mergeAll(FetchHttpClient.layer, CredentialsFromEnv);
+
+const program = issuesListForRepo({
+  owner: "acme",
+  repo: "payments",
+  state: "open",
+  labels: "bug",
+  sort: "updated",
+  direction: "desc",
+  per_page: 50,
+});
+
+const issues = await Effect.runPromise(Effect.provide(program, GitHubLive));
+```
+
+:::tip[One layer, the whole GitHub REST API]
+The same layer can automate repositories, pull requests, Actions, releases, deployments, teams, projects, packages, webhooks, and security alerts. [See three common GitHub workflows](/blog/announcing-distilled-github#code-examples).
+:::
+
+## Source and package
+
+<CardGroup cols={3}>
+  <Card title="npm package" href="https://www.npmjs.com/package/@kevinmichaelchen/distilled-github" icon="package-open">
+    Public package, generated source, declarations, and release history.
   </Card>
-  <Card title="Specification" href="https://github.com/kevinmichaelchen/distilled-spec-github" icon="file-json">
-    The authoritative versioned GitHub REST bundle consumed by generation.
+  <Card title="Implementation (private)" href="https://github.com/kevinmichaelchen/distilled-github" icon="lock-keyhole">
+    GitHub-specific runtime policy and committed REST operations.
+  </Card>
+  <Card title="Specification (private)" href="https://github.com/kevinmichaelchen/distilled-spec-github" icon="lock-keyhole">
+    Exact versioned GitHub REST bundle consumed by generation.
   </Card>
 </CardGroup>
 
-[View the package on npm](https://www.npmjs.com/package/@kevinmichaelchen/distilled-github).
-
-:::tip
-The compact mirror is a source-extraction strategy, not a fork: it retains the exact upstream artifact and records where it came from.
-:::
+Slash-delimited operation IDs become lower camelCase exports such as `reposGet`, `issuesListForRepo`, and `pullsCreate`.

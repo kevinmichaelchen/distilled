@@ -1,15 +1,17 @@
 ---
 title: Statsig SDK
-description: Effect-native Statsig Console API operations generated from the official versioned OpenAPI document.
+description: Install, authenticate, and manage Statsig resources with Effect-native Console API operations.
 sidebar:
   icon: flag
   badge: 0.1.2
-  order: 6
+  order: 7
 ---
 
-<Badge variant="success">Published</Badge> <Badge>OpenAPI 3</Badge> <Badge>312 operations</Badge>
+<Badge variant="success">Public package</Badge> <Badge>OpenAPI 3</Badge> <Badge>312 operations</Badge>
 
-The Statsig SDK pins the official `20240601` Console API contract and generates every operation through the shared OpenAPI path.
+The Statsig SDK pins the official `20240601` Console API contract and generates the complete administrative surface through the shared OpenAPI path.
+
+## Install
 
 <CodeGroup>
 
@@ -31,20 +33,46 @@ bun add @kevinmichaelchen/distilled-statsig effect
 
 Set `STATSIG_API_KEY`. The client sends it as `STATSIG-API-KEY` and pins the matching `STATSIG-API-VERSION` header.
 
-## Repositories
+## Quickstart
 
-<CardGroup cols={2}>
-  <Card title="Implementation" href="https://github.com/kevinmichaelchen/distilled-statsig" icon="code-2">
+List active temporary feature gates:
+
+```ts
+import * as Effect from "effect/Effect";
+import * as Layer from "effect/Layer";
+import * as FetchHttpClient from "effect/unstable/http/FetchHttpClient";
+import {
+  CredentialsFromEnv,
+  gatesListGates,
+} from "@kevinmichaelchen/distilled-statsig";
+
+const StatsigLive = Layer.mergeAll(FetchHttpClient.layer, CredentialsFromEnv);
+
+const program = gatesListGates({
+  type: "TEMPORARY",
+  includeArchived: "false",
+  limit: 100,
+});
+
+const gates = await Effect.runPromise(Effect.provide(program, StatsigLive));
+```
+
+:::tip[One layer, the whole Statsig Console API]
+The same layer can manage experiments, metrics, segments, layers, overrides, reviews, teams, environments, and release pipelines. [See three common Statsig workflows](/blog/announcing-distilled-statsig#code-examples).
+:::
+
+## Source and package
+
+<CardGroup cols={3}>
+  <Card title="npm package" href="https://www.npmjs.com/package/@kevinmichaelchen/distilled-statsig" icon="package-open">
+    Public package, generated source, declarations, and release history.
+  </Card>
+  <Card title="Implementation (private)" href="https://github.com/kevinmichaelchen/distilled-statsig" icon="lock-keyhole">
     Provider policy and 312 committed Effect operations.
   </Card>
-  <Card title="Specification" href="https://github.com/kevinmichaelchen/distilled-spec-statsig" icon="file-json">
+  <Card title="Specification (private)" href="https://github.com/kevinmichaelchen/distilled-spec-statsig" icon="lock-keyhole">
     Immutable mirror of Statsig's versioned Console API contract.
   </Card>
 </CardGroup>
 
-[View the package on npm](https://www.npmjs.com/package/@kevinmichaelchen/distilled-statsig).
-
-:::info
-Statsig's document omits `operationId` on every operation. Distilled derives stable identifiers from the operation tags and summaries, with collision checks, at the shared generator boundary.
-Derived operation exports use lower camelCase, such as `gatesListGates` and `alertsListToplineAlerts`.
-:::
+Statsig omits `operationId` throughout the source. Distilled derives stable lower camelCase names from tags and summaries and rejects collisions at the shared generator boundary.

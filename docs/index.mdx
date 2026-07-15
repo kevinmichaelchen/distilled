@@ -9,7 +9,7 @@ seo:
   title: Distilled — Effect-native SDK factory
 ---
 
-<Badge variant="accent">Effect 4</Badge> <Badge variant="success">OIDC published</Badge> <Badge>Open source SDKs</Badge>
+<Badge variant="accent">Effect 4</Badge> <Badge variant="success">OIDC published</Badge> <Badge>Public npm packages</Badge>
 
 Distilled turns authoritative API sources into ergonomic Effect-native SDKs. The shared package owns the stable runtime and generator boundary; each provider repository owns its source pin, patches, credentials, errors, retry policy, and generated operations.
 
@@ -78,7 +78,9 @@ flowchart LR
 
 The output stays inspectable: generated TypeScript is committed, regeneration is deterministic, and versioning happens per SDK rather than in one tightly coupled monorepo.
 
-## Packages
+## Start with Jira
+
+Choose any provider from the [SDK catalog](/sdks); Jira is shown here as a representative first install.
 
 <CodeGroup>
 
@@ -112,5 +114,3 @@ Distilled is deliberately downstream of Alchemy's pioneering software-factory wo
     The repositories and design patterns that inspired this factory.
   </Card>
 </CardGroup>
-
-<GithubInfo />

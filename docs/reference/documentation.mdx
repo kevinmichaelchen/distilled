@@ -25,14 +25,12 @@ bun run docs:preview
 </CodeGroup>
 
 The static build lands in `dist/`. `.github/workflows/docs.yml` verifies every
-documentation change and is ready to deploy with GitHub Pages when the
+documentation change and deploys the public site to GitHub Pages when the
 repository variable `ENABLE_GITHUB_PAGES` is set to `true`.
 
-> [!NOTE]
-> GitHub currently rejects Pages for this private repository under the owner's
-> plan. Keep the variable unset until private Pages is available or the
-> repository is intentionally made public; the build remains fully verified in
-> CI in the meantime.
+The workflow also compares the canonical SDK manifest with npm every Monday and
+on every documentation deployment. A package release therefore cannot remain
+silently out of sync with the versions shown on the site.
 
 ## Reader and agent outputs
 
@@ -51,4 +49,8 @@ repository variable `ENABLE_GITHUB_PAGES` is set to `true`.
 
 Blume can pull MDX and GitHub Releases at build time. The sibling implementation and spec repositories are private, and the `distilled` workflow token is intentionally scoped only to this repository. Adding a cross-repository token merely to import a handful of READMEs would weaken the release posture and make builds depend on remote content.
 
-Instead, this site owns durable architecture and usage docs and links directly to each source repository. A remote source becomes worthwhile when a sibling repo develops a substantial docs subtree and can expose it through a narrowly scoped GitHub App or public mirror.
+Instead, this site owns durable architecture and usage docs, labels repository
+access honestly, and publishes a generated support matrix from
+`docs/sdk-manifest.json`. A remote source becomes worthwhile when a sibling repo
+develops a substantial docs subtree and can expose it through a narrowly scoped
+GitHub App or public mirror.

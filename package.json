@@ -82,8 +82,11 @@
   "scripts": {
     "check": "bun run typecheck && bun test",
     "build": "node node_modules/typescript-compiler/bin/tsc -p tsconfig.build.json",
-    "docs:build": "blume build --strict",
+    "docs:build": "bun run docs:check && blume build --strict",
+    "docs:check": "bun scripts/sdk-docs.ts",
+    "docs:check:registry": "bun scripts/sdk-docs.ts --registry",
     "docs:dev": "blume dev",
+    "docs:generate": "bun scripts/sdk-docs.ts --write",
     "docs:preview": "blume preview",
     "docs:sync": "blume sync",
     "typecheck": "node node_modules/typescript-compiler/bin/tsc --noEmit",

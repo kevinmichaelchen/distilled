@@ -1,15 +1,17 @@
 ---
 title: OpenSearch SDK
-description: Effect-native OpenSearch operations generated from the project's official single-file OpenAPI 3.1 release.
+description: Install, authenticate, and query OpenSearch with Effect-native operations generated from OpenAPI 3.1.
 sidebar:
   icon: search
   badge: 0.1.2
-  order: 8
+  order: 9
 ---
 
-<Badge variant="success">Published</Badge> <Badge>OpenAPI 3.1</Badge> <Badge>684 operations</Badge>
+<Badge variant="success">Public package</Badge> <Badge>OpenAPI 3.1</Badge> <Badge>684 operations</Badge>
 
-The OpenSearch SDK pins the official client-generation contract and keeps cluster addressing, authentication, error mapping, and retry policy in the handwritten provider layer.
+The OpenSearch SDK pins the project's official client-generation contract and keeps cluster addressing, authentication, error mapping, and retry policy in the handwritten provider layer.
+
+## Install
 
 <CodeGroup>
 
@@ -29,23 +31,58 @@ bun add @kevinmichaelchen/distilled-opensearch effect
 
 ## Authentication
 
-Set `OPENSEARCH_URL` and either `OPENSEARCH_USERNAME` with `OPENSEARCH_PASSWORD`, or `OPENSEARCH_TOKEN`. A deliberately unsecured local cluster can use only `OPENSEARCH_URL`.
+| Variable | Purpose |
+| --- | --- |
+| `OPENSEARCH_URL` | Cluster endpoint |
+| `OPENSEARCH_USERNAME` + `OPENSEARCH_PASSWORD` | Optional basic-auth credentials |
+| `OPENSEARCH_TOKEN` | Optional bearer token instead of basic auth |
 
-Amazon OpenSearch Service uses AWS Signature Version 4. Supply a signing HTTP client layer for that deployment model; the core package deliberately does not import a cloud-provider SDK.
+An unsecured local cluster can use only `OPENSEARCH_URL`. Amazon OpenSearch Service requires a separately supplied AWS Signature Version 4 HTTP client layer; this non-cloud-specific package deliberately does not import an AWS SDK.
 
-## Repositories
+## Quickstart
 
-<CardGroup cols={2}>
-  <Card title="Implementation" href="https://github.com/kevinmichaelchen/distilled-opensearch" icon="code-2">
-    Provider policy and 684 committed Effect operations.
+Search the latest checkout errors across an index pattern:
+
+```ts
+import * as Effect from "effect/Effect";
+import * as Layer from "effect/Layer";
+import * as FetchHttpClient from "effect/unstable/http/FetchHttpClient";
+import {
+  CredentialsFromEnv,
+  search2,
+} from "@kevinmichaelchen/distilled-opensearch";
+
+const OpenSearchLive = Layer.mergeAll(
+  FetchHttpClient.layer,
+  CredentialsFromEnv,
+);
+
+const program = search2({
+  index: "application-logs-*",
+  q: "level:error AND service:checkout",
+  size: 25,
+  sort: "@timestamp:desc",
+});
+
+const errors = await Effect.runPromise(Effect.provide(program, OpenSearchLive));
+```
+
+:::tip[One layer, the whole OpenSearch API]
+The same layer can manage indexes and mappings, read and write documents, run aggregations, inspect cluster health, manage snapshots, administer security, and call supported plugin APIs. [See three common OpenSearch workflows](/blog/announcing-distilled-opensearch#code-examples).
+:::
+
+## Source and package
+
+<CardGroup cols={3}>
+  <Card title="npm package" href="https://www.npmjs.com/package/@kevinmichaelchen/distilled-opensearch" icon="package-open">
+    Public package, generated source, declarations, and release history.
   </Card>
-  <Card title="Specification" href="https://github.com/kevinmichaelchen/distilled-spec-opensearch" icon="file-json">
-    Immutable mirror of OpenSearch's official published OpenAPI release.
+  <Card title="Implementation (private)" href="https://github.com/kevinmichaelchen/distilled-opensearch" icon="lock-keyhole">
+    Cluster policy and 684 committed Effect operations.
+  </Card>
+  <Card title="Specification (private)" href="https://github.com/kevinmichaelchen/distilled-spec-opensearch" icon="lock-keyhole">
+    Immutable mirror of OpenSearch's published OpenAPI release.
   </Card>
 </CardGroup>
 
-[View the package on npm](https://www.npmjs.com/package/@kevinmichaelchen/distilled-opensearch).
-
-:::note
-OpenSearch publishes one operation for each supported path form, so generated names preserve official variant suffixes such as `clusterHealth0` and `search2`. Dotted namespaces become ordinary TypeScript camelCase boundaries.
-:::
+OpenSearch publishes distinct path-form variants. Dotted IDs become ordinary lower camelCase names such as `clusterHealth0`; official numeric suffixes such as `search2` remain to preserve one-to-one traceability.

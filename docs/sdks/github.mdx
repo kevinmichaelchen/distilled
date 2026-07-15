@@ -1,0 +1,45 @@
+---
+title: GitHub SDK
+description: Effect-native GitHub REST operations generated from GitHub's versioned OpenAPI bundle.
+sidebar:
+  icon: github
+  badge: 0.1.1
+  order: 3
+---
+
+<Badge variant="success">Published</Badge> <Badge>OpenAPI 3</Badge>
+
+GitHub maintains its REST API description in a large upstream repository. The spec mirror contains only the exact versioned bundle consumed by generation, avoiding an impractical downstream submodule while preserving authority.
+
+<CodeGroup>
+
+```bash npm
+npm install @kevinmichaelchen/distilled-github effect
+```
+
+```bash pnpm
+pnpm add @kevinmichaelchen/distilled-github effect
+```
+
+```bash bun
+bun add @kevinmichaelchen/distilled-github effect
+```
+
+</CodeGroup>
+
+## Repositories
+
+<CardGroup cols={2}>
+  <Card title="Implementation" href="https://github.com/kevinmichaelchen/distilled-github" icon="code-2">
+    GitHub-specific runtime wiring and thousands of generated REST operations.
+  </Card>
+  <Card title="Specification" href="https://github.com/kevinmichaelchen/distilled-spec-github" icon="file-json">
+    The authoritative versioned GitHub REST bundle consumed by generation.
+  </Card>
+</CardGroup>
+
+[View the package on npm](https://www.npmjs.com/package/@kevinmichaelchen/distilled-github).
+
+:::tip
+The compact mirror is a source-extraction strategy, not a fork: it retains the exact upstream artifact and records where it came from.
+:::

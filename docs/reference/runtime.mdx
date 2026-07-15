@@ -1,0 +1,43 @@
+---
+title: Runtime surface
+description: The stable shared modules re-exported by @kevinmichaelchen/distilled.
+sidebar:
+  icon: package-open
+  order: 2
+---
+
+The shared package is a versioned façade over `@distilled.cloud/core`. It keeps downstream imports stable and centralizes the generator adaptations required across providers.
+
+## Export map
+
+| Subpath | Purpose |
+| --- | --- |
+| `.` | Namespaced categories, errors, pagination, retry, sensitive values, traits, and `makeAPI` |
+| `/client` | API client construction |
+| `/traits` | HTTP request metadata attached to Effect schemas |
+| `/errors` | Shared typed error infrastructure |
+| `/retry` and `/retry-after` | Retry policy and server delay parsing |
+| `/pagination` | Stream-based paginated operations |
+| `/schema` and `/schemas` | Schema helpers |
+| `/sensitive` | Redaction-aware sensitive values |
+| `/json-patch` | RFC 6902 patch support |
+| `/openapi/generate` | Deterministic OpenAPI generator entry point |
+
+## Runtime guarantees
+
+<Columns cols={2}>
+  <Column>
+    <Panel title="Bun">
+      Export conditions point directly at TypeScript source for a source-first development experience.
+    </Panel>
+  </Column>
+  <Column>
+    <Panel title="Node">
+      Default exports point at compiled ESM with declaration maps and standards-compliant relative imports.
+    </Panel>
+  </Column>
+</Columns>
+
+:::warning
+Provider-specific credentials, errors, patches, and retry categorization do not belong in this package. Keeping that boundary strict is what lets the factory scale.
+:::

@@ -1,0 +1,73 @@
+---
+title: Introducing Distilled
+description: Extending Alchemy's Effect-native software-factory pattern to Jira, GitHub, and Slack.
+type: blog
+date: 2026-07-15
+sidebar:
+  hidden: true
+seo:
+  title: Introducing Distilled — an Effect-native SDK factory
+---
+
+The interesting part of a generated SDK is not how quickly it can produce files. It is whether the result stays trustworthy six months later: where the API shape came from, what was changed, how runtime behavior is shared, and who can publish the package.
+
+Distilled is an experiment in making those answers structural.
+
+## The spark
+
+Alchemy built a collection of repositories that behaves like a software factory. A shared Effect-native runtime and generator feed provider repositories; provider repositories pin their exact sources and commit generated operations; release automation publishes packages without hand-assembling every client.
+
+We studied `alchemy-run/distilled`, `distilled-spec-neon`, `distilled-neon`, `actions`, and `node-utils` at their current heads. The goal was not to borrow the shape from a diagram. It was to understand the working seams in real code.
+
+## The extension
+
+Jira, GitHub, and Slack exercise three different source strategies:
+
+<Columns cols={3}>
+  <Column>
+    <Card title="Jira" icon="ticket-check">
+      Mirror a maintained, compact OpenAPI document.
+    </Card>
+  </Column>
+  <Column>
+    <Card title="GitHub" icon="github">
+      Extract the exact versioned bundle from a very large OpenAPI repository.
+    </Card>
+  </Column>
+  <Column>
+    <Card title="Slack" icon="message-square">
+      Generate from the official typed SDK when maintained OpenAPI is absent.
+    </Card>
+  </Column>
+</Columns>
+
+That third path matters. “Generated” should not mean “OpenAPI at any cost.” An official TypeScript source can be more authoritative than a scraped pseudo-spec.
+
+## Small adaptations, explicit diffs
+
+The shared package is a thin façade over Alchemy's published core. Local generator changes stay deliberately small and regression-tested—for example, correctly quoting non-identifier OpenAPI parameter names such as GitHub's `enterprise-team`.
+
+<Diff
+  lang="ts"
+  old={`const key = parameter.name;\nreturn key + ": Schema.String";`}
+  new={`const key = JSON.stringify(parameter.name);\nreturn key + ": Schema.String";`}
+/>
+
+The generated operations themselves are committed. When an upstream source moves or a generator changes, reviewers see the consequences rather than trusting an opaque build step.
+
+## Releases without a publish token
+
+Each package is bound to one private GitHub repository, one `publish.yml`, and one `npm` environment through npm trusted publishing. GitHub issues a short-lived OIDC assertion; npm verifies the workflow identity; long-lived publish tokens are disabled.
+
+That security boundary influenced the docs architecture too. We chose not to import sibling private repository READMEs through a broad cross-repository token. Durable docs live here and link to the exact implementation and source repositories.
+
+## What shipped
+
+- A shared runtime and generator package
+- Jira and GitHub OpenAPI source mirrors
+- Jira, GitHub, and Slack Effect-native SDKs
+- Independent, OIDC-backed npm releases
+- Standard Node and source-first Bun export paths
+- This static, searchable, agent-readable Blume site
+
+The next provider should not require inventing the factory again. It should require making one careful source decision, then following a path that is already boring in all the right places.

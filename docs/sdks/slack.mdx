@@ -1,0 +1,45 @@
+---
+title: Slack SDK
+description: Effect-native Slack Web API operations generated from Slack's official TypeScript SDK.
+sidebar:
+  icon: message-square
+  badge: 0.1.0
+  order: 4
+---
+
+<Badge variant="success">Published</Badge> <Badge variant="accent">Typed source</Badge>
+
+Slack does not provide a maintained OpenAPI document suitable for this factory. Instead, the implementation pins `slackapi/node-slack-sdk` directly and derives its Web API surface with a provider-specific TypeScript AST generator.
+
+<CodeGroup>
+
+```bash npm
+npm install @kevinmichaelchen/distilled-slack effect
+```
+
+```bash pnpm
+pnpm add @kevinmichaelchen/distilled-slack effect
+```
+
+```bash bun
+bun add @kevinmichaelchen/distilled-slack effect
+```
+
+</CodeGroup>
+
+## Repositories
+
+<CardGroup cols={2}>
+  <Card title="Implementation" href="https://github.com/kevinmichaelchen/distilled-slack" icon="code-2">
+    Pinned Slack source, AST generator, rate-limit categories, and operations.
+  </Card>
+  <Card title="Official upstream" href="https://github.com/slackapi/node-slack-sdk" icon="external-link">
+    Slack's authoritative typed SDK and method definitions.
+  </Card>
+</CardGroup>
+
+[View the package on npm](https://www.npmjs.com/package/@kevinmichaelchen/distilled-slack).
+
+## Why there is no distilled-spec-slack
+
+The official source repository is already the compact, authoritative typed input. A second mirror would add indirection without adding curation, stability, or reviewability.

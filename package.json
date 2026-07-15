@@ -10,26 +10,83 @@
     "url": "git+https://github.com/kevinmichaelchen/distilled.git"
   },
   "files": ["lib", "src", "scripts"],
-  "publishConfig": { "access": "public" },
+  "publishConfig": {
+    "access": "public"
+  },
   "exports": {
-    ".": { "types": "./lib/index.d.ts", "bun": "./src/index.ts", "default": "./lib/index.js" },
-    "./category": { "types": "./lib/category.d.ts", "bun": "./src/category.ts", "default": "./lib/category.js" },
-    "./client": { "types": "./lib/client.d.ts", "bun": "./src/client.ts", "default": "./lib/client.js" },
-    "./errors": { "types": "./lib/errors.d.ts", "bun": "./src/errors.ts", "default": "./lib/errors.js" },
-    "./json-patch": { "types": "./lib/json-patch.d.ts", "bun": "./src/json-patch.ts", "default": "./lib/json-patch.js" },
-    "./pagination": { "types": "./lib/pagination.d.ts", "bun": "./src/pagination.ts", "default": "./lib/pagination.js" },
-    "./retry": { "types": "./lib/retry.d.ts", "bun": "./src/retry.ts", "default": "./lib/retry.js" },
-    "./retry-after": { "types": "./lib/retry-after.d.ts", "bun": "./src/retry-after.ts", "default": "./lib/retry-after.js" },
-    "./schema": { "types": "./lib/schema.d.ts", "bun": "./src/schema.ts", "default": "./lib/schema.js" },
-    "./schemas": { "types": "./lib/schemas.d.ts", "bun": "./src/schemas.ts", "default": "./lib/schemas.js" },
-    "./sensitive": { "types": "./lib/sensitive.d.ts", "bun": "./src/sensitive.ts", "default": "./lib/sensitive.js" },
-    "./traits": { "types": "./lib/traits.d.ts", "bun": "./src/traits.ts", "default": "./lib/traits.js" },
-    "./openapi/generate": { "bun": "./scripts/generate-openapi.ts", "default": "./scripts/generate-openapi.ts" }
+    ".": {
+      "types": "./lib/index.d.ts",
+      "bun": "./src/index.ts",
+      "default": "./lib/index.js"
+    },
+    "./category": {
+      "types": "./lib/category.d.ts",
+      "bun": "./src/category.ts",
+      "default": "./lib/category.js"
+    },
+    "./client": {
+      "types": "./lib/client.d.ts",
+      "bun": "./src/client.ts",
+      "default": "./lib/client.js"
+    },
+    "./errors": {
+      "types": "./lib/errors.d.ts",
+      "bun": "./src/errors.ts",
+      "default": "./lib/errors.js"
+    },
+    "./json-patch": {
+      "types": "./lib/json-patch.d.ts",
+      "bun": "./src/json-patch.ts",
+      "default": "./lib/json-patch.js"
+    },
+    "./pagination": {
+      "types": "./lib/pagination.d.ts",
+      "bun": "./src/pagination.ts",
+      "default": "./lib/pagination.js"
+    },
+    "./retry": {
+      "types": "./lib/retry.d.ts",
+      "bun": "./src/retry.ts",
+      "default": "./lib/retry.js"
+    },
+    "./retry-after": {
+      "types": "./lib/retry-after.d.ts",
+      "bun": "./src/retry-after.ts",
+      "default": "./lib/retry-after.js"
+    },
+    "./schema": {
+      "types": "./lib/schema.d.ts",
+      "bun": "./src/schema.ts",
+      "default": "./lib/schema.js"
+    },
+    "./schemas": {
+      "types": "./lib/schemas.d.ts",
+      "bun": "./src/schemas.ts",
+      "default": "./lib/schemas.js"
+    },
+    "./sensitive": {
+      "types": "./lib/sensitive.d.ts",
+      "bun": "./src/sensitive.ts",
+      "default": "./lib/sensitive.js"
+    },
+    "./traits": {
+      "types": "./lib/traits.d.ts",
+      "bun": "./src/traits.ts",
+      "default": "./lib/traits.js"
+    },
+    "./openapi/generate": {
+      "bun": "./scripts/generate-openapi.ts",
+      "default": "./scripts/generate-openapi.ts"
+    }
   },
   "scripts": {
     "check": "bun run typecheck && bun test",
-    "build": "tsc -p tsconfig.build.json",
-    "typecheck": "tsc --noEmit",
+    "build": "node node_modules/typescript-compiler/bin/tsc -p tsconfig.build.json",
+    "docs:build": "blume build --strict",
+    "docs:dev": "blume dev",
+    "docs:preview": "blume preview",
+    "docs:sync": "blume sync",
+    "typecheck": "node node_modules/typescript-compiler/bin/tsc --noEmit",
     "test": "bun test"
   },
   "dependencies": {
@@ -40,7 +97,9 @@
   },
   "devDependencies": {
     "@types/bun": "^1.3.14",
+    "blume": "1.0.4",
     "effect": "4.0.0-beta.98",
-    "typescript": "^7.0.2"
+    "typescript": "6.0.3",
+    "typescript-compiler": "npm:typescript@7.0.2"
   }
 }

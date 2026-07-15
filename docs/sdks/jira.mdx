@@ -1,0 +1,45 @@
+---
+title: Jira SDK
+description: Effect-native Jira Cloud Platform operations generated from Atlassian OpenAPI.
+sidebar:
+  icon: ticket-check
+  badge: 0.1.1
+  order: 2
+---
+
+<Badge variant="success">Published</Badge> <Badge>OpenAPI</Badge>
+
+The Jira SDK mirrors Atlassian's authoritative OpenAPI document in a dedicated spec repository, pins that mirror as a submodule, applies documented patches, and generates Effect operations through the shared factory.
+
+<CodeGroup>
+
+```bash npm
+npm install @kevinmichaelchen/distilled-jira effect
+```
+
+```bash pnpm
+pnpm add @kevinmichaelchen/distilled-jira effect
+```
+
+```bash bun
+bun add @kevinmichaelchen/distilled-jira effect
+```
+
+</CodeGroup>
+
+## Repositories
+
+<CardGroup cols={2}>
+  <Card title="Implementation" href="https://github.com/kevinmichaelchen/distilled-jira" icon="code-2">
+    Credentials, patches, errors, retries, tests, and generated operations.
+  </Card>
+  <Card title="Specification" href="https://github.com/kevinmichaelchen/distilled-spec-jira" icon="file-json">
+    Immutable mirror of the official Atlassian OpenAPI source.
+  </Card>
+</CardGroup>
+
+[View the package on npm](https://www.npmjs.com/package/@kevinmichaelchen/distilled-jira).
+
+## Why a spec repository?
+
+Atlassian publishes a maintained OpenAPI artifact that is compact enough to mirror directly. Isolating it gives the SDK a stable, exact source pin and makes upstream refreshes explicit.

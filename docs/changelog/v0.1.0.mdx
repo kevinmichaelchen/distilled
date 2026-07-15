@@ -1,0 +1,31 @@
+---
+title: v0.1.0
+description: Initial public release of the Distilled factory and its first three provider SDKs.
+type: changelog
+date: 2026-07-15
+changelog:
+  version: 0.1.0
+  category: Initial release
+sidebar:
+  label: v0.1.0
+  order: 1
+---
+
+The first Distilled release establishes the standalone software-factory pattern and ships Jira, GitHub, and Slack SDKs.
+
+## Added
+
+- Shared Effect 4 runtime façade over `@distilled.cloud/core@0.29.0`
+- Deterministic OpenAPI 2/3 generation with RFC 6902 patch envelopes
+- Jira source mirror and `@kevinmichaelchen/distilled-jira`
+- GitHub source bundle mirror and `@kevinmichaelchen/distilled-github`
+- Slack TypeScript-source generator and `@kevinmichaelchen/distilled-slack`
+- Dual source-first Bun and compiled Node exports
+- GitHub Actions OIDC trusted publishing with npm tokens disabled
+- Blume documentation, local search, RSS, raw Markdown mirrors, and GitHub Pages deployment
+
+## Verified
+
+All four npm packages were installed into a clean consumer directory and imported successfully with standard Node ESM. The SDK release workflows also completed through OIDC without npm tokens.
+
+> **Patch note:** Jira and GitHub received `0.1.1` releases immediately after launch to make one relative source import follow the same explicit `.ts` extension pattern used by Alchemy. Slack already followed that pattern at `0.1.0`.

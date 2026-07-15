@@ -1,0 +1,57 @@
+---
+title: Alchemy lineage
+description: The Alchemy repositories and patterns that shaped Distilled.
+sidebar:
+  icon: sparkles
+  order: 2
+---
+
+Distilled follows patterns learned from Alchemy's real repositories, not a clean-room approximation. We inspected their current code, release workflows, source mirrors, and generated SDKs before extending the pattern to Jira, GitHub, and Slack.
+
+:::info
+This project is independent. Credit belongs to Alchemy for the underlying Distilled runtime and the software-factory architecture that demonstrated how well Effect-native generated SDKs can work.
+:::
+
+## Core references
+
+<CardGroup cols={2}>
+  <Card title="alchemy-run/distilled" href="https://github.com/alchemy-run/distilled" icon="factory">
+    Shared Effect-native runtime, traits, generators, and provider packages.
+  </Card>
+  <Card title="alchemy-run/distilled-spec-neon" href="https://github.com/alchemy-run/distilled-spec-neon" icon="file-json">
+    A concrete example of isolating and curating an upstream API specification.
+  </Card>
+  <Card title="alchemy-run/distilled-neon" href="https://github.com/alchemy-run/distilled-neon" icon="database">
+    A generated provider SDK that pins its spec repository as an explicit input.
+  </Card>
+  <Card title="alchemy-run/actions" href="https://github.com/alchemy-run/actions" icon="workflow">
+    Shared CI and release conventions, including modern npm trusted publishing.
+  </Card>
+  <Card title="alchemy-run/node-utils" href="https://github.com/alchemy-run/node-utils" icon="package">
+    Dual Bun/Node package exports and TypeScript's relative-import rewriting pattern.
+  </Card>
+  <Card title="Original architecture note" href="https://gist.github.com/kevinmichaelchen/8b4bb0f96087fd99e441319ae7aea939" icon="notebook-text">
+    The initial study that motivated this standalone factory.
+  </Card>
+</CardGroup>
+
+## Patterns we retained
+
+<Steps>
+  <Step title="Separate the source from the implementation">
+    A curated API source can evolve on its own without mixing generated code and upstream history.
+  </Step>
+  <Step title="Commit generated operations">
+    Generator changes and source updates remain visible in normal code review.
+  </Step>
+  <Step title="Offer source-first and compiled exports">
+    Bun consumes TypeScript directly while standard Node receives compiled ESM and declarations.
+  </Step>
+  <Step title="Publish with workload identity">
+    GitHub Actions exchanges OIDC identity with npm; long-lived publish tokens are disabled.
+  </Step>
+</Steps>
+
+## Where this factory differs
+
+Alchemy's collection optimizes for its own provider fleet. This project uses standalone repositories under one account and applies a source decision rule per API: mirror maintained OpenAPI, extract a compact authoritative bundle when upstream history is too large, or generate from an official typed SDK when OpenAPI does not exist.

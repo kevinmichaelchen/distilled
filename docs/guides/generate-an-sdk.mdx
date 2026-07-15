@@ -1,0 +1,66 @@
+---
+title: Generate an SDK
+description: A practical path from authoritative API input to an Effect-native package.
+sidebar:
+  icon: wand-sparkles
+  order: 3
+---
+
+## Before you begin
+
+Choose the source strategy before writing generator code. The authority and shape of the upstream input determines whether you need a spec repository at all.
+
+<Steps>
+  <Step title="Pin the authoritative input">
+    Mirror a maintained OpenAPI document or add the official typed SDK as a submodule. Pin an exact commit.
+  </Step>
+  <Step title="Document semantic patches">
+    Keep unavoidable RFC 6902 transformations small, named, and reviewable. Never silently mutate the source.
+  </Step>
+  <Step title="Generate operations">
+    Emit Effect schemas, HTTP traits, categories, and yieldable operations through the shared generator.
+  </Step>
+  <Step title="Add provider behavior">
+    Implement credentials, client wiring, error mapping, retry policy, and any pagination conventions in the provider repository.
+  </Step>
+  <Step title="Prove determinism">
+    Regenerate and fail when committed operations drift. Test generator adaptations with focused fixtures.
+  </Step>
+  <Step title="Publish independently">
+    Release the provider package from its own trusted GitHub workflow.
+  </Step>
+</Steps>
+
+## OpenAPI generator
+
+```ts
+import { generateFromOpenAPI } from "@kevinmichaelchen/distilled/openapi/generate";
+
+generateFromOpenAPI({
+  specPath: "specs/provider/specs/openapi.json",
+  patchDir: "patches",
+  outputDir: "src/operations",
+});
+```
+
+The exact provider configuration is documented by the source type:
+
+<AutoTypeTable path="./scripts/generate-openapi.ts" name="GeneratorConfig" />
+
+## Agent handoff
+
+<Prompt description="Ask a coding agent to evaluate a new provider source." actions={["copy"]}>
+  Study the Distilled source decision rule. For this API, identify the authoritative maintained source, decide whether a separate distilled-spec repository is justified, document any unavoidable patches, and propose the smallest deterministic generator path. Do not scrape prose into a pseudo-spec when an official typed source exists.
+</Prompt>
+
+<Accordion>
+  <AccordionItem title="Why are generated files committed?">
+    Because source and generator changes should produce reviewable diffs. Consumers also receive a complete source package without needing generation at install time.
+  </AccordionItem>
+  <AccordionItem title="Why not one monorepo?">
+    Independent repositories keep source history, provider cadence, package ownership, and release permissions explicit.
+  </AccordionItem>
+  <AccordionItem title="When should I create distilled-spec-*?">
+    When a compact, authoritative artifact benefits from immutable mirroring or extraction. Skip it when the official source repository is already the right-sized authoritative input.
+  </AccordionItem>
+</Accordion>

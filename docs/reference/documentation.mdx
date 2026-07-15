@@ -1,0 +1,46 @@
+---
+title: Documentation operations
+description: Develop, build, verify, and deploy the Blume site.
+sidebar:
+  icon: book-copy
+  order: 5
+---
+
+## Commands
+
+<CodeGroup>
+
+```bash Develop
+bun run docs:dev
+```
+
+```bash Build
+bun run docs:build
+```
+
+```bash Preview
+bun run docs:preview
+```
+
+</CodeGroup>
+
+The static build lands in `dist/` and is deployed by GitHub Pages from `.github/workflows/docs.yml`.
+
+## Reader and agent outputs
+
+<TypeTable
+  type={{
+    markdown: { type: "{route}.md", description: "Component-aware plain Markdown mirror." },
+    mdx: { type: "{route}.mdx", description: "Exact source MDX mirror." },
+    llms: { type: "/llms.txt", description: "Compact, structured page index." },
+    llmsFull: { type: "/llms-full.txt", description: "Full documentation corpus." },
+    manifest: { type: "/agent-readability.json", description: "Machine-discoverable content surface." },
+    rss: { type: "/blog/rss.xml | /changelog/rss.xml", description: "Dated content feeds." },
+  }}
+/>
+
+## Why remote content sources are not enabled
+
+Blume can pull MDX and GitHub Releases at build time. The sibling implementation and spec repositories are private, and the `distilled` workflow token is intentionally scoped only to this repository. Adding a cross-repository token merely to import a handful of READMEs would weaken the release posture and make builds depend on remote content.
+
+Instead, this site owns durable architecture and usage docs and links directly to each source repository. A remote source becomes worthwhile when a sibling repo develops a substantial docs subtree and can expose it through a narrowly scoped GitHub App or public mirror.

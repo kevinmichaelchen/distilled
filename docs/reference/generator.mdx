@@ -1,0 +1,25 @@
+---
+title: Generator configuration
+description: Live configuration surface for deterministic OpenAPI generation.
+sidebar:
+  icon: settings-2
+  order: 3
+---
+
+`generateFromOpenAPI` reads an OpenAPI 2 or 3 document, applies documented patch envelopes, and emits Effect-native operations.
+
+<AutoTypeTable path="./scripts/generate-openapi.ts" name="GeneratorConfig" />
+
+## Minimal invocation
+
+```ts
+import { generateFromOpenAPI } from "@kevinmichaelchen/distilled/openapi/generate";
+
+generateFromOpenAPI({
+  specPath: "specs/provider/specs/openapi.json",
+  patchDir: "patches",
+  outputDir: "src/operations",
+});
+```
+
+The generated directory should be committed and checked for drift after regeneration.

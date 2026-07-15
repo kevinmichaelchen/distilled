@@ -41,9 +41,23 @@ That becomes more valuable as a flow grows from a rate estimate into transaction
 
 Set either `AVALARA_BEARER_TOKEN` or `AVALARA_ACCOUNT_ID` and `AVALARA_LICENSE_KEY`. Use `AVALARA_BASE_URL=https://sandbox-rest.avatax.com` for a sandbox account.
 
-```bash
-npm install @kevinmichaelchen/distilled-avalara effect
-```
+<Tabs>
+  <Tab title="npm">
+    ```bash
+    npm install @kevinmichaelchen/distilled-avalara effect
+    ```
+  </Tab>
+  <Tab title="pnpm">
+    ```bash
+    pnpm add @kevinmichaelchen/distilled-avalara effect
+    ```
+  </Tab>
+  <Tab title="bun">
+    ```bash
+    bun add @kevinmichaelchen/distilled-avalara effect
+    ```
+  </Tab>
+</Tabs>
 
 ```ts
 import * as Effect from "effect/Effect";

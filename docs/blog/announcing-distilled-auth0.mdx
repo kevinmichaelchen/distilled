@@ -41,9 +41,23 @@ Configuration is a layer rather than a hidden singleton. Tests can replace the t
 
 Set `AUTH0_DOMAIN` and `AUTH0_MANAGEMENT_TOKEN`, then install:
 
-```bash
-npm install @kevinmichaelchen/distilled-auth0 effect
-```
+<Tabs>
+  <Tab title="npm">
+    ```bash
+    npm install @kevinmichaelchen/distilled-auth0 effect
+    ```
+  </Tab>
+  <Tab title="pnpm">
+    ```bash
+    pnpm add @kevinmichaelchen/distilled-auth0 effect
+    ```
+  </Tab>
+  <Tab title="bun">
+    ```bash
+    bun add @kevinmichaelchen/distilled-auth0 effect
+    ```
+  </Tab>
+</Tabs>
 
 ```ts
 import * as Effect from "effect/Effect";

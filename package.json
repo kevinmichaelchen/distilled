@@ -1,0 +1,25 @@
+{
+  "name": "@kevinmichaelchen/distilled",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "license": "Apache-2.0",
+  "exports": {
+    ".": "./src/index.ts",
+    "./openapi": "./src/openapi.ts"
+  },
+  "scripts": {
+    "check": "bun run typecheck && bun test",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "effect": "^3.22.0",
+    "fast-json-patch": "^3.1.1",
+    "openapi-typescript": "^7.10.1"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.3.11",
+    "typescript": "^5.9.3"
+  }
+}

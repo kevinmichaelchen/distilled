@@ -17,6 +17,46 @@ Each implementation pins an immutable commit from a separate source repository. 
 
 No prose scraping. No community schema substituted for a vendor contract. No generated output fetched during package installation.
 
+## Why use an Effect-native SDK?
+
+A generated TypeScript client can autocomplete a request and still leave the hard parts to every caller. Distilled moves those parts into a shared, composable runtime:
+
+<Columns cols={3}>
+  <Column>
+    <Card title="Validate at the boundary" icon="scan-check">
+      Effect schemas decode requests and responses at runtime, so an upstream shape change becomes a typed failure instead of quietly contaminating application state.
+    </Card>
+  </Column>
+  <Column>
+    <Card title="Handle failure deliberately" icon="route">
+      Vendor errors, parse failures, retry categories, and `Retry-After` behavior are values your Effect program can compose, test, trace, and recover from.
+    </Card>
+  </Column>
+  <Column>
+    <Card title="Know what you shipped" icon="git-commit-horizontal">
+      Every operation comes from an exact official source pin. Generated code is committed, so source and generator updates produce an ordinary reviewable diff.
+    </Card>
+  </Column>
+</Columns>
+
+The practical pitch is simple: use the vendor's API without building another private layer for configuration, redacted credentials, response validation, typed errors, retries, and observability.
+
+### Why the AvaTax SDK?
+
+Tax integrations are broad, consequential, and full of operational edge cases. [`@kevinmichaelchen/distilled-avalara`](https://www.npmjs.com/package/@kevinmichaelchen/distilled-avalara) gives an Effect application 470 generated AvaTax operations—from address validation and tax calculation to transactions, exemptions, filings, and reports—through one consistent runtime. It supports both bearer tokens and Avalara's account/license-key credentials, redacts secrets, preserves rate-limit guidance, and can switch between production and sandbox through configuration.
+
+```ts
+import * as Effect from "effect/Effect";
+import * as Layer from "effect/Layer";
+import * as FetchHttpClient from "effect/unstable/http/FetchHttpClient";
+import { CredentialsFromEnv, Ping } from "@kevinmichaelchen/distilled-avalara";
+
+const AvaTaxLive = Layer.mergeAll(FetchHttpClient.layer, CredentialsFromEnv);
+const connection = await Effect.runPromise(Effect.provide(Ping({}), AvaTaxLive));
+```
+
+Statsig brings the same model to feature-management automation: typed Console API operations, a pinned API version, and composable failure handling. Auth0 does it for tenant administration, where identity-management changes benefit from validated responses and explicit, observable errors.
+
 ## What differed
 
 | API | Source shape | Generated operations | Provider policy |
@@ -31,8 +71,8 @@ The other irregularities stayed where Alchemy's architecture says they should. A
 
 ## What shipped
 
-- [`@kevinmichaelchen/distilled-avalara`](https://www.npmjs.com/package/@kevinmichaelchen/distilled-avalara)
-- [`@kevinmichaelchen/distilled-statsig`](https://www.npmjs.com/package/@kevinmichaelchen/distilled-statsig)
-- [`@kevinmichaelchen/distilled-auth0`](https://www.npmjs.com/package/@kevinmichaelchen/distilled-auth0)
+- **Avalara:** [`npm`](https://www.npmjs.com/package/@kevinmichaelchen/distilled-avalara) · [`SDK`](https://github.com/kevinmichaelchen/distilled-avalara) · [`official-spec mirror`](https://github.com/kevinmichaelchen/distilled-spec-avalara)
+- **Statsig:** [`npm`](https://www.npmjs.com/package/@kevinmichaelchen/distilled-statsig) · [`SDK`](https://github.com/kevinmichaelchen/distilled-statsig) · [`official-spec mirror`](https://github.com/kevinmichaelchen/distilled-spec-statsig)
+- **Auth0:** [`npm`](https://www.npmjs.com/package/@kevinmichaelchen/distilled-auth0) · [`SDK`](https://github.com/kevinmichaelchen/distilled-auth0) · [`official-spec mirror`](https://github.com/kevinmichaelchen/distilled-spec-auth0)
 
 Each SDK has its own private implementation repository, private source mirror, committed generated operations, CI, and npm trusted-publishing workflow. The factory expanded; its boundaries did not blur.

@@ -19,12 +19,12 @@ No prose scraping. No community schema substituted for a vendor contract. No gen
 
 ## Why use an Effect-native SDK?
 
-A generated TypeScript client can autocomplete a request and still leave the hard parts to every caller. Distilled moves those parts into a shared, composable runtime:
+A generated TypeScript SDK can autocomplete a request and still leave the hard parts to every caller. Distilled moves those parts into a shared, composable Protocol runtime:
 
 <Columns cols={3}>
   <Column>
-    <Card title="Validate at the boundary" icon="scan-check">
-      Effect schemas decode requests and responses at runtime, so an upstream shape change becomes a typed failure instead of quietly contaminating application state.
+    <Card title="Describe the boundary" icon="scan-check">
+      Generated schemas retain request and response shapes while HTTP traits preserve exact path, query, header, and body routing.
     </Card>
   </Column>
   <Column>
@@ -39,7 +39,7 @@ A generated TypeScript client can autocomplete a request and still leave the har
   </Column>
 </Columns>
 
-The practical pitch is simple: use the vendor's API without building another private layer for configuration, redacted credentials, response validation, typed errors, retries, and observability.
+The practical pitch is simple: use the vendor's API without building another private layer for configuration, redacted credentials, wire routing, typed errors, retries, and observability.
 
 ### Why the AvaTax SDK?
 
@@ -49,13 +49,15 @@ Tax integrations are broad, consequential, and full of operational edge cases. [
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as FetchHttpClient from "effect/unstable/http/FetchHttpClient";
-import { CredentialsFromEnv, ping } from "@kevinmichaelchen/distilled-avalara";
+import { CredentialsFromEnv, Services } from "@kevinmichaelchen/distilled-avalara";
 
 const AvaTaxLive = Layer.mergeAll(FetchHttpClient.layer, CredentialsFromEnv);
-const checkAvaTaxConnection = ping({}).pipe(Effect.provide(AvaTaxLive));
+const checkAvaTaxConnection = Services.utilities.ping({}).pipe(
+  Effect.provide(AvaTaxLive),
+);
 ```
 
-Statsig brings the same model to feature-management automation: typed Console API operations, a pinned API version, and composable failure handling. Auth0 does it for tenant administration, where identity-management changes benefit from validated responses and explicit, observable errors.
+Statsig brings the same model to feature-management automation: typed Console API operations, a pinned API version, and composable failure handling. Auth0 does it for tenant administration, where identity-management changes benefit from explicit, observable errors.
 
 ## What differed
 
@@ -65,7 +67,7 @@ Statsig brings the same model to feature-management automation: typed Console AP
 | Statsig | OpenAPI 3 without operation IDs | 312 | API key plus version header |
 | Auth0 | Large OpenAPI 3.1 document | 451 | tenant URL plus Management API bearer token |
 
-Statsig exposed the only genuinely shared gap: all 312 operations omit `operationId`. The fix belongs in the common generator, so Distilled now derives deterministic names from tags and summaries and rejects collisions. That change shipped as [`@kevinmichaelchen/distilled@0.1.1`](https://www.npmjs.com/package/@kevinmichaelchen/distilled).
+Statsig exposes a shared naming requirement: all 312 operations omit `operationId`. The common generator derives deterministic names from tags and summaries and rejects collisions. That policy lives in [`@kevinmichaelchen/distilled`](https://www.npmjs.com/package/@kevinmichaelchen/distilled).
 
 The other irregularities stayed where Alchemy's architecture says they should. AvaTax's credential alternatives live in its provider package. Auth0's enormous union schemas pass through the generator's existing safety limit. Binary responses without upstream schemas remain unknown instead of receiving fabricated types.
 

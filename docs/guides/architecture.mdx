@@ -8,10 +8,10 @@ sidebar:
 
 ## Stable boundary
 
-The shared `distilled` package is intentionally thin. It pins and re-exports Alchemy's `@distilled.cloud/core`, owns cross-provider generator adaptations, and exposes the common Effect runtime surface. Provider-specific behavior stays in each SDK.
+The shared `distilled` package owns the provider-neutral Effect engine, HTTP traits, and generator. Each SDK owns the Protocol layer that resolves credentials and implements its wire and error formats.
 
 :::info
-The accepted [runtime parity decision](/guides/runtime-parity) makes this boundary explicit: inherited defects are recorded before divergence, upstream correction is preferred, and every local exception must be narrow, justified, and regression-tested.
+The accepted [Protocol architecture decision](/guides/protocol-architecture) makes this boundary explicit. Generated operations are uniform; provider behavior remains isolated and testable.
 :::
 
 <TypeTable
@@ -19,7 +19,7 @@ The accepted [runtime parity decision](/guides/runtime-parity) makes this bounda
     shared: {
       type: "distilled",
       required: true,
-      description: "Runtime façade, common traits, and generator adaptations.",
+      description: "Protocol engine, common traits, pagination, retry, and generators.",
     },
     source: {
       type: "distilled-spec-* | upstream submodule",
@@ -29,7 +29,7 @@ The accepted [runtime parity decision](/guides/runtime-parity) makes this bounda
     provider: {
       type: "distilled-<provider>",
       required: true,
-      description: "Credentials, patches, errors, retry policy, and generated operations.",
+      description: "Credentials, Protocol, patches, errors, retry policy, and generated services.",
     },
   }}
 />
@@ -38,19 +38,19 @@ The accepted [runtime parity decision](/guides/runtime-parity) makes this bounda
 
 <Tree>
   <Tree.Folder name="distilled" defaultOpen>
-    <Tree.File name="shared Effect runtime façade" />
+    <Tree.File name="shared Effect Protocol engine" />
     <Tree.File name="OpenAPI generator" />
   </Tree.Folder>
   <Tree.Folder name="distilled-spec-jira" defaultOpen>
     <Tree.File name="official Atlassian OpenAPI" />
     <Tree.Folder name="distilled-jira">
-      <Tree.File name="patches + generated operations" />
+      <Tree.File name="Protocol + patches + generated services" />
     </Tree.Folder>
   </Tree.Folder>
   <Tree.Folder name="distilled-spec-github" defaultOpen>
     <Tree.File name="versioned GitHub REST bundle" />
     <Tree.Folder name="distilled-github">
-      <Tree.File name="patches + generated operations" />
+      <Tree.File name="Protocol + patches + generated services" />
     </Tree.Folder>
   </Tree.Folder>
   <Tree.Folder name="distilled-slack" defaultOpen>
@@ -60,25 +60,25 @@ The accepted [runtime parity decision](/guides/runtime-parity) makes this bounda
   <Tree.Folder name="distilled-spec-avalara">
     <Tree.File name="official AvaTax Swagger" />
     <Tree.Folder name="distilled-avalara">
-      <Tree.File name="provider policy + generated operations" />
+      <Tree.File name="provider Protocol + generated services" />
     </Tree.Folder>
   </Tree.Folder>
   <Tree.Folder name="distilled-spec-statsig">
     <Tree.File name="official Console API OpenAPI" />
     <Tree.Folder name="distilled-statsig">
-      <Tree.File name="provider policy + generated operations" />
+      <Tree.File name="provider Protocol + generated services" />
     </Tree.Folder>
   </Tree.Folder>
   <Tree.Folder name="distilled-spec-auth0">
     <Tree.File name="official Management API OpenAPI" />
     <Tree.Folder name="distilled-auth0">
-      <Tree.File name="provider policy + generated operations" />
+      <Tree.File name="provider Protocol + generated services" />
     </Tree.Folder>
   </Tree.Folder>
   <Tree.Folder name="distilled-spec-opensearch">
     <Tree.File name="official merged OpenAPI 3.1 release" />
     <Tree.Folder name="distilled-opensearch">
-      <Tree.File name="cluster policy + 684 generated operations" />
+      <Tree.File name="cluster Protocol + generated services" />
     </Tree.Folder>
   </Tree.Folder>
 </Tree>
@@ -105,7 +105,7 @@ sequenceDiagram
   participant N as npm
   U->>S: publish source revision
   S->>P: advance exact submodule pin
-  P->>P: apply patches and regenerate
+  P->>P: apply patches and regenerate services
   P->>P: review committed diff
   P->>N: publish with GitHub OIDC
 ```

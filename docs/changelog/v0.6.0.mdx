@@ -1,0 +1,54 @@
+---
+title: v0.6.0
+description: Every Distilled SDK now uses the Protocol architecture and resource-grouped service modules.
+type: changelog
+date: 2026-07-16
+changelog:
+  version: 0.6.0
+  category: Architecture
+sidebar:
+  label: v0.6.0
+  order: 1
+---
+
+All eight SDKs now use the same Protocol-based Effect architecture and are
+released at `0.2.0`.
+
+## Released
+
+- `@kevinmichaelchen/distilled@0.2.1`
+- `@kevinmichaelchen/distilled-auth0@0.2.0`
+- `@kevinmichaelchen/distilled-avalara@0.2.0`
+- `@kevinmichaelchen/distilled-basis-theory@0.2.0`
+- `@kevinmichaelchen/distilled-github@0.2.0`
+- `@kevinmichaelchen/distilled-jira@0.2.0`
+- `@kevinmichaelchen/distilled-opensearch@0.2.0`
+- `@kevinmichaelchen/distilled-slack@0.2.0`
+- `@kevinmichaelchen/distilled-statsig@0.2.0`
+
+## Changed
+
+- Standardized provider-owned Protocol layers across every SDK.
+- Resolved credentials inside each request so refreshed or rotated values are
+  visible without rebuilding the SDK.
+- Generated explicit operation input, output, error, and context types.
+- Grouped 4,066 operations into resource service modules with direct package
+  subpaths.
+- Limited automatic retry wiring to safe HTTP methods by default.
+- Made OpenAPI generation fail closed and replace its complete output
+  atomically.
+- Added complete GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS, and TRACE input
+  handling. OpenSearch now includes ten non-deprecated HEAD operations.
+- Used Effect `Redacted` schemas for known provider payload secrets.
+- Added repeated-token guards for cursor and token pagination.
+- Updated Auth0, Avalara, GitHub, Jira, and Statsig to their latest source pins.
+
+This is a breaking release. Provider packages expose credentials, errors,
+traits, a root `Services` namespace, and direct resource-service subpaths.
+
+## Verified
+
+Every OpenAPI provider reports zero failed or unsupported operations, and
+Slack's extraction tests cover its 268-operation surface. Each projection was
+regenerated from its pinned source before release. CI and publishing verify the
+committed package with typechecking, tests, and builds.

@@ -3,13 +3,13 @@ title: Jira SDK
 description: Install, authenticate, and search Jira Cloud with Effect-native operations generated from Atlassian OpenAPI.
 sidebar:
   icon: ticket-check
-  badge: 0.1.2
+  badge: 0.2.0
   order: 3
 ---
 
 <Badge variant="success">Public package</Badge> <Badge>OpenAPI</Badge> <Badge>587 operations</Badge>
 
-The Jira SDK turns Atlassian's authoritative OpenAPI document into yieldable Effect operations with validated responses, typed failures, tracing, and retry policy.
+The Jira SDK turns Atlassian's authoritative OpenAPI document into resource-grouped Effect operations with typed failures and provider-owned authentication, error, and retry behavior.
 
 ## Install
 
@@ -47,12 +47,12 @@ import * as Layer from "effect/Layer";
 import * as FetchHttpClient from "effect/unstable/http/FetchHttpClient";
 import {
   CredentialsFromEnv,
-  searchAndReconcileIssuesUsingJql,
+  Services,
 } from "@kevinmichaelchen/distilled-jira";
 
 const JiraLive = Layer.mergeAll(FetchHttpClient.layer, CredentialsFromEnv);
 
-const program = searchAndReconcileIssuesUsingJql({
+const program = Services.issue_search.searchAndReconcileIssuesUsingJql({
   jql: 'project = "PAY" AND resolution = Unresolved ORDER BY priority DESC',
   fields: ["summary", "status", "priority", "assignee"],
   maxResults: 50,
@@ -72,7 +72,7 @@ The same layer can create and transition issues, add comments, manage projects a
     Public package, generated source, declarations, and release history.
   </Card>
   <Card title="Implementation (private)" href="https://github.com/kevinmichaelchen/distilled-jira" icon="lock-keyhole">
-    Credentials, patches, errors, retries, tests, and generated operations.
+    Credentials, Protocol, patches, retries, tests, and generated services.
   </Card>
   <Card title="Specification (private)" href="https://github.com/kevinmichaelchen/distilled-spec-jira" icon="lock-keyhole">
     Immutable mirror of Atlassian's official OpenAPI source.

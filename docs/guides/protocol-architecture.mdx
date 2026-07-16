@@ -1,0 +1,54 @@
+---
+title: "ADR-001: Use the Protocol architecture"
+description: Keep the shared engine and provider packages aligned with Alchemy's current Distilled design.
+sidebar:
+  label: Protocol architecture decision
+  icon: git-compare-arrows
+  order: 3
+---
+
+<Badge>Accepted</Badge>
+
+## Context
+
+Every SDK needs the same Effect operation semantics without forcing credentials,
+wire formats, and error envelopes into one provider-neutral transport object. Alchemy's Protocol
+architecture separates those concerns while keeping generated operations
+uniform.
+
+## Decision
+
+`@kevinmichaelchen/distilled` provides the provider-neutral engine. Each SDK
+provides a Protocol layer.
+
+- Input and output schemas carry HTTP and wire-name traits.
+- `API.make` owns lazy operation construction, HTTP execution, context capture,
+  and retry integration.
+- A provider Protocol resolves credentials per call, builds the request, and
+  decodes the provider's success and error formats.
+- Generated operations declare explicit input, output, error, and context
+  types and are grouped into resource service modules.
+- Provider-specific behavior stays in the provider repository.
+- Source adapters may differ, but they must emit the same operation contract.
+
+## Alignment rule
+
+Alchemy's newest Protocol-based implementation is the architectural reference.
+Local changes may complete provider-neutral behavior needed for published SDKs,
+but they must preserve the same boundaries and generated operation shape.
+
+The following require focused tests:
+
+1. Shared request, response, error, retry, or pagination behavior.
+2. Generator changes that affect more than one provider.
+3. Provider Protocol changes that affect authentication or wire encoding.
+4. Source patches that change a public operation type.
+
+## Consequences
+
+Provider packages are independently releasable and can model distinct
+authentication and response formats without forking operation semantics. A
+runtime change can still affect every SDK, so the shared package is released
+and verified before provider regeneration.
+
+See the [factory architecture](/guides/architecture), [runtime reference](/reference/runtime), and [Alchemy lineage](/inspiration).

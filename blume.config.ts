@@ -10,10 +10,10 @@ export default defineConfig({
     href: "/",
   },
   banner: {
-    content: "Eight Effect-native API SDKs are live.",
-    link: { text: "Explore the catalog", href: "/sdks" },
+    content: "All eight SDKs now use the Protocol architecture.",
+    link: { text: "Read the release", href: "/changelog/v0.6.0" },
     dismissible: true,
-    id: "distilled-eight-sdks",
+    id: "distilled-protocol-engine",
   },
   content: {
     root: "docs",

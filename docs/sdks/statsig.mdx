@@ -3,7 +3,7 @@ title: Statsig SDK
 description: Install, authenticate, and manage Statsig resources with Effect-native Console API operations.
 sidebar:
   icon: flag
-  badge: 0.1.2
+  badge: 0.2.0
   order: 7
 ---
 
@@ -31,7 +31,7 @@ bun add @kevinmichaelchen/distilled-statsig effect
 
 ## Authentication
 
-Set `STATSIG_API_KEY`. The client sends it as `STATSIG-API-KEY` and pins the matching `STATSIG-API-VERSION` header.
+Set `STATSIG_API_KEY`. The provider Protocol sends it as `STATSIG-API-KEY` and pins the matching `STATSIG-API-VERSION` header.
 
 ## Quickstart
 
@@ -43,12 +43,12 @@ import * as Layer from "effect/Layer";
 import * as FetchHttpClient from "effect/unstable/http/FetchHttpClient";
 import {
   CredentialsFromEnv,
-  gatesListGates,
+  Services,
 } from "@kevinmichaelchen/distilled-statsig";
 
 const StatsigLive = Layer.mergeAll(FetchHttpClient.layer, CredentialsFromEnv);
 
-const program = gatesListGates({
+const program = Services.gates.gatesListGates({
   type: "TEMPORARY",
   includeArchived: "false",
   limit: 100,
@@ -68,7 +68,7 @@ The same layer can manage experiments, metrics, segments, layers, overrides, rev
     Public package, generated source, declarations, and release history.
   </Card>
   <Card title="Implementation (private)" href="https://github.com/kevinmichaelchen/distilled-statsig" icon="lock-keyhole">
-    Provider policy and 312 committed Effect operations.
+    Statsig Protocol and 312 committed operations grouped by resource.
   </Card>
   <Card title="Specification (private)" href="https://github.com/kevinmichaelchen/distilled-spec-statsig" icon="lock-keyhole">
     Immutable mirror of Statsig's versioned Console API contract.

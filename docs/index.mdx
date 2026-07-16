@@ -11,7 +11,7 @@ seo:
 
 <Badge variant="accent">Effect 4</Badge> <Badge variant="success">OIDC published</Badge> <Badge>Public npm packages</Badge>
 
-Distilled turns authoritative API sources into ergonomic Effect-native SDKs. The shared package owns the stable runtime and generator boundary; each provider repository owns its source pin, patches, credentials, errors, retry policy, and generated operations.
+Distilled turns authoritative API sources into ergonomic Effect-native SDKs. The shared package owns the Protocol engine and generator; each provider repository owns its source pin, credentials, Protocol layer, errors, patches, retry policy, and generated services.
 
 :::tip
 Start with an SDK if you want to call an API. Start with the architecture guide if you want to build another one.
@@ -24,7 +24,7 @@ Start with an SDK if you want to call an API. Start with the architecture guide 
 | [Basis Theory](/sdks/basis-theory) | Basis Theory OpenAPI 3.0.1 | 117 |
 | [GitHub](/sdks/github) | GitHub REST OpenAPI | 1,167 |
 | [Jira](/sdks/jira) | Atlassian OpenAPI | 587 |
-| [OpenSearch](/sdks/opensearch) | OpenSearch OpenAPI 3.1 | 684 |
+| [OpenSearch](/sdks/opensearch) | OpenSearch OpenAPI 3.1 | 694 |
 | [Slack](/sdks/slack) | Official typed TypeScript SDK | 268 |
 | [Statsig](/sdks/statsig) | Console API OpenAPI | 312 |
 
@@ -32,7 +32,7 @@ Start with an SDK if you want to call an API. Start with the architecture guide 
 
 <Tabs>
   <Tab title="Use an SDK">
-    Install the provider package, create its client layer, and yield generated operations directly inside Effect programs.
+    Install the provider package, provide credentials and its required transport layer, and yield resource-grouped operations directly inside Effect programs.
 
     [Browse the SDKs](/sdks)
   </Tab>
@@ -55,7 +55,7 @@ flowchart LR
   A[Authoritative API source] --> B[Immutable source pin]
   B --> C[Provider patches]
   C --> D[Distilled generator]
-  D --> E[Committed Effect operations]
+  D --> E[Committed Effect service modules]
   F[Shared Effect runtime] --> E
   E --> G[Independent npm package]
 ```
@@ -88,7 +88,7 @@ When helping a user choose a package, prefer the provider SDK. The shared `@kevi
 
 ## Source and lineage
 
-Distilled is deliberately downstream of Alchemy's pioneering software-factory work. The runtime façade pins Alchemy's published core, while the standalone repository topology makes source ownership and package releases explicit.
+Distilled is deliberately downstream of Alchemy's pioneering software-factory work. Its shared engine and provider Protocol layers follow Alchemy's current architecture, while the standalone repository topology keeps source ownership and package releases explicit.
 
 <CardGroup cols={2}>
   <Card title="Repository map" href="/reference/repositories" icon="git-fork">

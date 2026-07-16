@@ -1,43 +1,68 @@
 ---
 title: Runtime surface
-description: The stable shared modules re-exported by @kevinmichaelchen/distilled.
+description: The shared Protocol engine exported by @kevinmichaelchen/distilled.
 sidebar:
   icon: package-open
   order: 2
 ---
 
-The shared package is a versioned façade over `@distilled.cloud/core`. It keeps downstream imports stable and centralizes the generator adaptations required across providers.
+The shared package implements the provider-neutral half of every SDK. Provider
+packages supply credentials and a Protocol layer; generated services supply
+trait-annotated schemas and explicit operations.
 
 ## Export map
 
 | Subpath | Purpose |
 | --- | --- |
-| `.` | Namespaced categories, errors, pagination, retry, sensitive values, traits, and `makeAPI` |
-| `/client` | API client construction |
-| `/traits` | HTTP request metadata attached to Effect schemas |
-| `/errors` | Shared typed error infrastructure |
-| `/retry` and `/retry-after` | Retry policy and server delay parsing |
-| `/pagination` | Stream-based paginated operations |
-| `/schema` and `/schemas` | Schema helpers |
-| `/sensitive` | Redaction-aware sensitive values |
-| `/json-patch` | RFC 6902 patch support |
-| `/openapi/generate` | Deterministic OpenAPI generator entry point |
+| `/api` | `Protocol`, `OperationMethod`, `make`, and `makePaginated` |
+| `/trait` | HTTP, wire-name, response, and typed-error annotations |
+| `/protocol-http` | Trait-driven request construction and response helpers |
+| `/errors` | Shared typed HTTP and configuration errors |
+| `/category` and `/error-category` | Cross-provider semantic error categories |
+| `/retry` and `/retry-after` | Retry policies and server delay parsing |
+| `/pagination` | Page, cursor, token, and single-result streams |
+| `/schema` | Lightweight generated-code surface over Effect Schema |
+| `/json-patch` | Source-model patch support |
+| `/openapi/generate` | OpenAPI-to-Protocol generator entry point |
+
+## Operation contract
+
+An operation is both callable and yieldable:
+
+```ts
+import { Services } from "@kevinmichaelchen/distilled-github";
+
+const repository = yield* Services.repos.reposGet({
+  owner: "effect-ts",
+  repo: "effect",
+});
+
+const getRepository = yield* Services.repos.reposGet;
+const sameRepository = yield* getRepository({
+  owner: "effect-ts",
+  repo: "effect",
+});
+```
+
+For OpenAPI providers, the operation context includes provider credentials and
+the Effect HTTP transport. Slack instead provides its Protocol through the
+official typed `WebClient`. The error channel names the provider-wide, declared
+operation, and transport failures available to that SDK.
 
 ## Runtime guarantees
 
 <Columns cols={2}>
   <Column>
     <Panel title="Bun">
-      Export conditions point directly at TypeScript source for a source-first development experience.
+      Export conditions point directly at TypeScript source.
     </Panel>
   </Column>
   <Column>
     <Panel title="Node">
-      Default exports point at compiled ESM with declaration maps and standards-compliant relative imports.
+      Compiled ESM includes declarations and standards-compliant relative imports.
     </Panel>
   </Column>
 </Columns>
 
-:::warning
-Provider-specific credentials, errors, patches, and retry categorization do not belong in this package. Keeping that boundary strict is what lets the factory scale.
-:::
+Provider credentials, auth headers, base URLs, envelopes, and special
+pagination behavior belong in the provider package.

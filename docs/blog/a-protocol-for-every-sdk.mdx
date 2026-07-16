@@ -1,0 +1,87 @@
+---
+title: A protocol for every SDK
+description: How the Distilled Protocol engine works, why it is safer, and what remains to improve.
+type: blog
+date: 2026-07-16
+sidebar:
+  hidden: true
+seo:
+  title: A protocol for every SDK — Distilled's shared engine
+---
+
+An SDK has two jobs that look similar but are not the same. It gives application
+code a pleasant typed function, and it speaks a particular service's language
+over the network. The Distilled architecture draws a firm line between
+those jobs.
+
+## What changed
+
+Every generated operation now describes what it needs: its input and output
+types, HTTP method and path, request fields, possible errors, and Effect
+requirements. A provider Protocol handles the service-specific details such as
+credentials, base URLs, headers, response envelopes, and error messages.
+
+The shared engine joins them at runtime:
+
+```text
+typed operation → provider Protocol → Effect HTTP client → provider Protocol → typed result
+```
+
+GitHub and Jira can therefore share operation semantics without pretending
+that GitHub's bearer token and Jira's basic authentication are the same thing.
+Slack follows the same service layout while delegating transport to Slack's
+official typed `WebClient`.
+
+## Why this is better
+
+The separation makes behavior easier to reason about. Credentials are resolved
+for each call, so rotation and refresh can work without reconstructing provider
+state. Errors say which provider and transport failures can actually occur.
+Request routing comes from schema traits rather than a generic body-building
+guess. Retry behavior is attached only to safe methods unless a provider makes
+an explicit decision for a mutation.
+
+Generation is safer too. A broken source or patch cannot leave a half-updated
+SDK behind while still reporting success. The generator builds a complete
+staging tree, verifies every operation, and swaps it into place only after the
+whole run succeeds.
+
+## What this means for users
+
+The `0.2.0` packages group operations by resource and make them available from
+the root `Services` namespace or a direct service subpath.
+
+```ts
+import { Services } from "@kevinmichaelchen/distilled-github";
+
+const repository = yield* Services.repos.reposGet({
+  owner: "effect-ts",
+  repo: "effect",
+});
+```
+
+Applications provide provider credentials and an Effect HTTP client. The
+operation remains both directly callable and yieldable, so it composes like an
+ordinary Effect program.
+
+## Where the factory stands
+
+The eight SDKs now expose 4,066 operations from their latest pinned sources.
+OpenSearch gained ten HEAD operations that its contract had always described.
+All OpenAPI providers regenerate with zero failed or unsupported operations.
+Publishing then typechecks, tests, and builds the committed projection before
+it reaches npm.
+
+## What still deserves work
+
+The architecture is stronger, but the work is not finished. We still want a
+fully typed Protocol error boundary, richer nested-query encoding, clearer
+schema-aware output decoding, synchronized OAuth refresh caching, and live
+provider integration tests in addition to deterministic transport fixtures.
+Alchemy's Protocol work is still evolving, so future releases should continue
+to follow its public operation shape while treating unreleased implementation
+details as provisional.
+
+Those are bounded improvements now. The important part is already structural:
+one operation model, one shared engine, and a provider Protocol wherever APIs
+genuinely differ.

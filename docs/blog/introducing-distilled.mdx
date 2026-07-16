@@ -15,7 +15,7 @@ Distilled is an experiment in making those answers structural.
 
 ## The spark
 
-Alchemy built a collection of repositories that behaves like a software factory. A shared Effect-native runtime and generator feed provider repositories; provider repositories pin their exact sources and commit generated operations; release automation publishes packages without hand-assembling every client.
+Alchemy built a collection of repositories that behaves like a software factory. A shared Effect-native runtime and generator feed provider repositories; provider repositories pin their exact sources and commit generated operations; release automation publishes packages without hand-assembling every SDK.
 
 We studied `alchemy-run/distilled`, `distilled-spec-neon`, `distilled-neon`, `actions`, and `node-utils` at their current heads. The goal was not to borrow the shape from a diagram. It was to understand the working seams in real code.
 
@@ -43,9 +43,9 @@ Jira, GitHub, and Slack exercise three different source strategies:
 
 That third path matters. “Generated” should not mean “OpenAPI at any cost.” An official TypeScript source can be more authoritative than a scraped pseudo-spec.
 
-## Small adaptations, explicit diffs
+## Protocol operations, explicit diffs
 
-The shared package is a thin façade over Alchemy's published core. Local generator changes stay deliberately small and regression-tested—for example, correctly quoting non-identifier OpenAPI parameter names such as GitHub's `enterprise-team`.
+The shared package implements the provider-neutral Protocol engine. Each SDK supplies credentials and provider wire behavior, while the generator emits the same explicit `API.OperationMethod` contract for every OpenAPI source. Generator behavior is regression-tested—for example, exact wire names remain distinct from safe TypeScript property names.
 
 <Diff
   lang="ts"

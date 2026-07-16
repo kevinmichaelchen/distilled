@@ -3,13 +3,13 @@ title: Auth0 SDK
 description: Install, authenticate, and administer Auth0 with Effect-native Management API v2 operations.
 sidebar:
   icon: shield-check
-  badge: 0.1.1
+  badge: 0.2.0
   order: 8
 ---
 
 <Badge variant="success">Public package</Badge> <Badge>OpenAPI 3.1</Badge> <Badge>451 operations</Badge>
 
-The Auth0 SDK pins the official Management API v2 contract and keeps tenant addressing, bearer authentication, secret redaction, errors, and retries in the handwritten provider layer.
+The Auth0 SDK pins the official Management API v2 contract and keeps tenant addressing, bearer authentication, secret redaction, errors, and retries in its handwritten Protocol.
 
 ## Install
 
@@ -46,12 +46,12 @@ import * as Layer from "effect/Layer";
 import * as FetchHttpClient from "effect/unstable/http/FetchHttpClient";
 import {
   CredentialsFromEnv,
-  getUsers,
+  Services,
 } from "@kevinmichaelchen/distilled-auth0";
 
 const Auth0Live = Layer.mergeAll(FetchHttpClient.layer, CredentialsFromEnv);
 
-const program = getUsers({
+const program = Services.users.getUsers({
   q: "blocked:true",
   search_engine: "v3",
   fields: "user_id,email,blocked,last_login",
@@ -73,7 +73,7 @@ The same layer can manage roles, permissions, organizations, connections, applic
     Public package, generated source, declarations, and release history.
   </Card>
   <Card title="Implementation (private)" href="https://github.com/kevinmichaelchen/distilled-auth0" icon="lock-keyhole">
-    Tenant-aware policy and 451 committed Effect operations.
+    Tenant-aware Protocol and 451 committed operations grouped by resource.
   </Card>
   <Card title="Specification (private)" href="https://github.com/kevinmichaelchen/distilled-spec-auth0" icon="lock-keyhole">
     Immutable mirror of Auth0's Management API contract.

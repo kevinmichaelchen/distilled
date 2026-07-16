@@ -19,12 +19,12 @@ Identity administration is both automation-friendly and security-sensitive. Prov
   <Card title="Auth0" href="https://auth0.com" icon="shield-check">The identity platform and product overview.</Card>
   <Card title="Management API" href="https://auth0.com/docs/api/management/v2" icon="book-open">Auth0's administrative API reference.</Card>
   <Card title="Official Node SDK" href="https://github.com/auth0/node-auth0" icon="github">Auth0's maintained JavaScript and TypeScript client.</Card>
-  <Card title="Distilled implementation" href="https://github.com/kevinmichaelchen/distilled-auth0" icon="code-2">Tenant-aware policy and 451 committed generated operations.</Card>
+  <Card title="Distilled implementation" href="https://github.com/kevinmichaelchen/distilled-auth0" icon="code-2">Tenant-aware Protocol and 451 committed operations grouped by resource.</Card>
 </CardGroup>
 
 ## Why Effect and Distilled?
 
-Identity-management failures should not disappear into generic exceptions. Distilled maps known Auth0 statuses, validates supported schemas, redacts Management API tokens and sensitive response fields, and exposes retry behavior. Effect lets a provisioning workflow compose those failures with timeouts, backoff, tracing, concurrency limits, and compensating logic.
+Identity-management failures should not disappear into generic exceptions. Distilled maps known Auth0 statuses, uses generated schema traits to route request fields, redacts Management API tokens and known secret fields, and exposes retry behavior. Effect lets a provisioning workflow compose those failures with timeouts, backoff, tracing, concurrency limits, and compensating logic.
 
 Configuration is a layer rather than a hidden singleton. Tests can replace the tenant credentials or HTTP client, and production programs can share one explicit dependency graph.
 
@@ -32,9 +32,9 @@ Configuration is a layer rather than a hidden singleton. Tests can replace the t
 
 <Steps>
   <Step title="Mirror Auth0's official OpenAPI">A dedicated source repository records the Management API v2 OpenAPI 3.1 document at an immutable commit.</Step>
-  <Step title="Generate the administrative surface">The common generator emits 451 operation modules for users, clients, connections, organizations, logs, actions, roles, and tenant settings.</Step>
+  <Step title="Generate the administrative surface">The common generator emits 451 operations grouped into resource services for users, clients, connections, organizations, logs, actions, roles, and tenant settings.</Step>
   <Step title="Respect the complexity guard">Four exceptionally large top-level unions use the generator's existing unknown-output safety limit rather than expanding into unstable combinatorial schemas.</Step>
-  <Step title="Add tenant-aware runtime policy">The handwritten layer constructs `https://<tenant>/api/v2`, injects bearer authentication, redacts secrets, and decodes Auth0 errors.</Step>
+  <Step title="Add the tenant Protocol">The handwritten Protocol constructs `https://<tenant>/api/v2`, injects bearer authentication, redacts secrets, and decodes Auth0 errors.</Step>
 </Steps>
 
 ## Code Examples
@@ -66,9 +66,7 @@ import * as Redacted from "effect/Redacted";
 import * as FetchHttpClient from "effect/unstable/http/FetchHttpClient";
 import {
   CredentialsFromEnv,
-  getLogs,
-  getUsers,
-  postUsers,
+  Services,
 } from "@kevinmichaelchen/distilled-auth0";
 
 const Auth0Live = Layer.mergeAll(FetchHttpClient.layer, CredentialsFromEnv);
@@ -83,7 +81,7 @@ With `Auth0Live` in scope, you can manage users, roles, permissions, organizatio
 Find accounts that need security or support follow-up while requesting only the fields the workflow consumes.
 
 ```ts
-const blockedUsers = getUsers({
+const blockedUsers = Services.users.getUsers({
   q: "blocked:true",
   search_engine: "v3",
   fields: "user_id,email,blocked,last_login",
@@ -99,11 +97,13 @@ const findBlockedUsers = blockedUsers.pipe(Effect.provide(Auth0Live));
 Create an account in a database connection while keeping the initial password redacted in Effect logs and diagnostics.
 
 ```ts
-const provisionDatabaseUser = postUsers({
-  connection: "Username-Password-Authentication",
-  email: "new.user@example.com",
-  password: Redacted.make("replace-with-a-generated-secret"),
-  verify_email: true,
+const provisionDatabaseUser = Services.users.postUsers({
+  body: {
+    connection: "Username-Password-Authentication",
+    email: "new.user@example.com",
+    password: Redacted.make("replace-with-a-generated-secret"),
+    verify_email: true,
+  },
 }).pipe(Effect.provide(Auth0Live));
 ```
 
@@ -112,7 +112,7 @@ const provisionDatabaseUser = postUsers({
 Pull recent failure events for an operational dashboard or incident workflow.
 
 ```ts
-const inspectRecentTenantErrors = getLogs({
+const inspectRecentTenantErrors = Services.logs.getLogs({
   search: "type:f OR type:fe OR type:fu",
   sort: "date:-1",
   per_page: 100,

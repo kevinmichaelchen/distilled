@@ -26,7 +26,7 @@ This release makes provider operation identifiers read naturally in TypeScript w
 
 - Dots, slashes, hyphens, underscores, and whitespace now form deterministic camelCase word boundaries.
 - Operation functions begin with a lowercase character; generated schema and type names remain PascalCase.
-- Generated directories are recreated on every run so removed or case-renamed operations cannot survive as stale modules.
+- Successful generation atomically replaces the complete resource-service tree, so removed or case-renamed operations cannot survive as stale modules.
 - Avalara, GitHub REST, Jira, OpenSearch, and Statsig were regenerated. Auth0 and Slack already produced idiomatic names and did not require package releases.
 
 This is intentionally a breaking cleanup with no deprecated aliases. The packages have no known consumers, so carrying the malformed names forward would add complexity without protecting real users.

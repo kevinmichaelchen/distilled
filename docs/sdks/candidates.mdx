@@ -10,7 +10,7 @@ sidebar:
 This catalogue records promising providers before they become implementation commitments. A candidate advances only when its authoritative source, product boundary, generator fit, and runtime risks are understood.
 
 :::note[Conformance comes first]
-New provider work begins after the local generator and façade pass the promotion checks below. Inherited runtime behavior stays aligned with Alchemy and is tracked through the [runtime parity decision](/guides/runtime-parity), rather than silently forked. A large operation count alone is not evidence of a correct client.
+New provider work begins after the shared engine and generator pass the promotion checks below. Runtime and generated operation shape follow the [Protocol architecture decision](/guides/protocol-architecture). A large operation count alone is not evidence of a correct SDK.
 :::
 
 ## How to read the backlog
@@ -69,7 +69,7 @@ This sequence may be parallelized at the research stage. It should not produce m
 - Validate OAuth 2 scopes, API-token authentication, cloud-site addressing, cursor links, and rate-limit behavior.
 - Confluence returns `_links.next` as a relative URL. The current generic pagination detector does not infer a cursor from that URL, so the provider needs a focused pagination adapter or a source-traceable generator extension with its own regression test.
 - Decide whether v1-only resources are excluded, separately packaged, or represented through a deliberately small compatibility layer.
-- Do not scaffold the publishable provider until the hardened shared generator has been released; downstream generation must be reproducible from declared package dependencies rather than a local filesystem override.
+- Build the provider against a declared shared-package release; downstream generation must remain reproducible without a local filesystem override.
 
 ### CircleCI API v2
 
@@ -88,7 +88,7 @@ This sequence may be parallelized at the research stage. It should not produce m
 - Snapshot or otherwise pin the authoritative schema and document its provenance.
 - Separate GraphQL transport errors from the `errors` returned in successful HTTP responses.
 - Default query retries may be safe; mutations require explicit idempotency analysis.
-- Prefer checked-in named documents for high-value workflows over an unbounded generic client unless an ADR chooses otherwise.
+- Prefer checked-in named documents for high-value workflows over an unbounded generic GraphQL surface unless an ADR chooses otherwise.
 
 ### Grafana HTTP APIs
 

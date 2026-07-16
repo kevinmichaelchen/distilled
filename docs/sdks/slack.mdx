@@ -3,7 +3,7 @@ title: Slack SDK
 description: Install, authenticate, and automate Slack with Effect-native operations derived from Slack's official TypeScript SDK.
 sidebar:
   icon: message-square
-  badge: 0.1.0
+  badge: 0.2.0
   order: 5
 ---
 
@@ -41,14 +41,14 @@ Post a message to a channel:
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import {
-  chatPostMessage,
   CredentialsFromEnv,
-  SlackClientLive,
+  Services,
+  SlackProtocolLive,
 } from "@kevinmichaelchen/distilled-slack";
 
-const SlackLive = SlackClientLive.pipe(Layer.provide(CredentialsFromEnv));
+const SlackLive = SlackProtocolLive.pipe(Layer.provide(CredentialsFromEnv));
 
-const program = chatPostMessage({
+const program = Services.chat.chatPostMessage({
   channel: "C01234567",
   text: "The release is live :tada:",
 });

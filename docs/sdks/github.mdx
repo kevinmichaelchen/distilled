@@ -3,7 +3,7 @@ title: GitHub SDK
 description: Install, authenticate, and automate GitHub with Effect-native REST operations.
 sidebar:
   icon: github
-  badge: 0.1.2
+  badge: 0.2.0
   order: 4
 ---
 
@@ -47,12 +47,12 @@ import * as Layer from "effect/Layer";
 import * as FetchHttpClient from "effect/unstable/http/FetchHttpClient";
 import {
   CredentialsFromEnv,
-  issuesListForRepo,
+  Services,
 } from "@kevinmichaelchen/distilled-github";
 
 const GitHubLive = Layer.mergeAll(FetchHttpClient.layer, CredentialsFromEnv);
 
-const program = issuesListForRepo({
+const program = Services.issues.issuesListForRepo({
   owner: "acme",
   repo: "payments",
   state: "open",
@@ -76,7 +76,7 @@ The same layer can automate repositories, pull requests, Actions, releases, depl
     Public package, generated source, declarations, and release history.
   </Card>
   <Card title="Implementation (private)" href="https://github.com/kevinmichaelchen/distilled-github" icon="lock-keyhole">
-    GitHub-specific runtime policy and committed REST operations.
+    GitHub Protocol and committed REST operations grouped by resource.
   </Card>
   <Card title="Specification (private)" href="https://github.com/kevinmichaelchen/distilled-spec-github" icon="lock-keyhole">
     Exact versioned GitHub REST bundle consumed by generation.

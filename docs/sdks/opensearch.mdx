@@ -3,13 +3,13 @@ title: OpenSearch SDK
 description: Install, authenticate, and query OpenSearch with Effect-native operations generated from OpenAPI 3.1.
 sidebar:
   icon: search
-  badge: 0.1.2
+  badge: 0.2.0
   order: 9
 ---
 
-<Badge variant="success">Public package</Badge> <Badge>OpenAPI 3.1</Badge> <Badge>684 operations</Badge>
+<Badge variant="success">Public package</Badge> <Badge>OpenAPI 3.1</Badge> <Badge>694 operations</Badge>
 
-The OpenSearch SDK pins the project's official client-generation contract and keeps cluster addressing, authentication, error mapping, and retry policy in the handwritten provider layer.
+The OpenSearch SDK pins the project's published OpenAPI contract and keeps cluster addressing, authentication, error mapping, and retry policy in its handwritten Protocol.
 
 ## Install
 
@@ -37,7 +37,7 @@ bun add @kevinmichaelchen/distilled-opensearch effect
 | `OPENSEARCH_USERNAME` + `OPENSEARCH_PASSWORD` | Optional basic-auth credentials |
 | `OPENSEARCH_TOKEN` | Optional bearer token instead of basic auth |
 
-An unsecured local cluster can use only `OPENSEARCH_URL`. Amazon OpenSearch Service requires a separately supplied AWS Signature Version 4 HTTP client layer; this non-cloud-specific package deliberately does not import an AWS SDK.
+An unsecured local cluster can use only `OPENSEARCH_URL`. Amazon OpenSearch Service requires a separately supplied Effect HTTP transport configured for AWS Signature Version 4; this non-cloud-specific package deliberately does not import an AWS SDK.
 
 ## Quickstart
 
@@ -49,7 +49,7 @@ import * as Layer from "effect/Layer";
 import * as FetchHttpClient from "effect/unstable/http/FetchHttpClient";
 import {
   CredentialsFromEnv,
-  search2,
+  Services,
 } from "@kevinmichaelchen/distilled-opensearch";
 
 const OpenSearchLive = Layer.mergeAll(
@@ -57,7 +57,7 @@ const OpenSearchLive = Layer.mergeAll(
   CredentialsFromEnv,
 );
 
-const program = search2({
+const program = Services.search.search2({
   index: "application-logs-*",
   q: "level:error AND service:checkout",
   size: 25,
@@ -78,7 +78,7 @@ The same layer can manage indexes and mappings, read and write documents, run ag
     Public package, generated source, declarations, and release history.
   </Card>
   <Card title="Implementation (private)" href="https://github.com/kevinmichaelchen/distilled-opensearch" icon="lock-keyhole">
-    Cluster policy and 684 committed Effect operations.
+    Cluster Protocol and 694 committed operations grouped by resource.
   </Card>
   <Card title="Specification (private)" href="https://github.com/kevinmichaelchen/distilled-spec-opensearch" icon="lock-keyhole">
     Immutable mirror of OpenSearch's published OpenAPI release.

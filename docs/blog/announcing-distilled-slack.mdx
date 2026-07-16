@@ -1,6 +1,6 @@
 ---
 title: Announcing the Distilled Slack SDK
-description: Send messages and automate Slack workspaces with an Effect-native client generated from Slack's maintained TypeScript SDK.
+description: Send messages and automate Slack workspaces with an Effect-native SDK generated from Slack's maintained TypeScript SDK.
 type: blog
 date: 2026-07-15
 sidebar:
@@ -24,7 +24,7 @@ Slack is often the human edge of an automation: the place a deployment reports b
 
 ## Why Effect and Distilled?
 
-A notification is easy; a dependable notification pipeline is not. It needs redacted tokens, typed Slack failures, rate-limit handling, structured retries, tracing, and testable client substitution. Effect gives those concerns one composable model, while Distilled turns every generated method into an operation whose requirements and errors are present in its type.
+A notification is easy; a dependable notification pipeline is not. It needs redacted tokens, typed Slack failures, rate-limit handling, structured retries, tracing, and a replaceable Protocol. Effect gives those concerns one composable model, while Distilled turns every generated method into an operation whose requirements and errors are present in its type.
 
 The SDK retains Slack's official request and response types, so it stays familiar to users of `@slack/web-api` while gaining Effect-native orchestration.
 
@@ -36,7 +36,7 @@ Slack is the instructive exception in the collection. Its old OpenAPI repository
   <Step title="Choose the maintained source">Following Alchemy's non-OpenAPI strategy, the SDK pins `slackapi/node-slack-sdk` directly instead of generating from an abandoned schema.</Step>
   <Step title="Inspect the method table">A small TypeScript AST generator reads Slack's official Web API method definitions and emits 268 Effect operations.</Step>
   <Step title="Preserve upstream types">Inputs and outputs import Slack's own public TypeScript types; no parallel model layer is fabricated.</Step>
-  <Step title="Add the Effect boundary">Handwritten layers own token redaction, client construction, mapped Slack errors, and tracing spans.</Step>
+  <Step title="Add the Effect boundary">The handwritten Slack Protocol owns token redaction, official `WebClient` construction, mapped Slack errors, and tracing spans.</Step>
 </Steps>
 
 ## Code Examples
@@ -66,13 +66,11 @@ import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import {
   CredentialsFromEnv,
-  SlackClientLive,
-  chatPostMessage,
-  conversationsHistory,
-  usersInfo,
+  Services,
+  SlackProtocolLive,
 } from "@kevinmichaelchen/distilled-slack";
 
-const SlackLive = SlackClientLive.pipe(Layer.provide(CredentialsFromEnv));
+const SlackLive = SlackProtocolLive.pipe(Layer.provide(CredentialsFromEnv));
 ```
 
 :::tip[One layer, the whole Slack Web API]
@@ -84,7 +82,7 @@ With `SlackLive` in scope, you can send messages, read threads and history, mana
 Post a release, incident, or workflow notification to a known channel.
 
 ```ts
-const sendAnnouncement = chatPostMessage({
+const sendAnnouncement = Services.chat.chatPostMessage({
   channel: "C01234567",
   text: "distilled-slack is live :tada:",
 }).pipe(Effect.provide(SlackLive));
@@ -95,7 +93,7 @@ const sendAnnouncement = chatPostMessage({
 Fetch the latest conversation context for a digest, support workflow, or bot.
 
 ```ts
-const readRecentHistory = conversationsHistory({
+const readRecentHistory = Services.conversations.conversationsHistory({
   channel: "C01234567",
   limit: 50,
   inclusive: true,
@@ -107,7 +105,7 @@ const readRecentHistory = conversationsHistory({
 Resolve a Slack user ID before routing a notification or enriching an audit record.
 
 ```ts
-const lookUpUser = usersInfo({
+const lookUpUser = Services.users.usersInfo({
   user: "U01234567",
   include_locale: true,
 }).pipe(Effect.provide(SlackLive));

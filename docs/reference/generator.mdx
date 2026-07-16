@@ -6,7 +6,7 @@ sidebar:
   order: 3
 ---
 
-`generateFromOpenAPI` reads an OpenAPI 2 or 3 document, applies documented patch envelopes, and emits Effect-native operations. The generator is a source-traceable local adaptation governed by the [runtime parity decision](/guides/runtime-parity); it does not replace Alchemy's runtime.
+`generateFromOpenAPI` reads an OpenAPI 2 or 3 document, applies documented patch envelopes, and emits resource-grouped services using the shared Protocol operation contract.
 
 <AutoTypeTable path="./scripts/generate-openapi.ts" name="GeneratorConfig" />
 
@@ -18,7 +18,10 @@ import { generateFromOpenAPI } from "@kevinmichaelchen/distilled/openapi/generat
 const coverage = generateFromOpenAPI({
   specPath: "specs/provider/specs/openapi.json",
   patchDir: "patches",
-  outputDir: "src/operations",
+  outputDir: "src/services",
+  protocolName: "ProviderProtocol",
+  operationErrorType: "ProviderOpError",
+  operationContextType: "ProviderOpContext",
 });
 ```
 
@@ -26,13 +29,18 @@ The generated directory should be committed and checked for drift after regenera
 
 ## Output contract
 
-Generation is all-or-nothing. Operation failures are collected and reported together, and the existing output directory is left intact. A successful run replaces the directory as one complete projection, so stale operation modules cannot survive a source change.
+Generation is all-or-nothing. Operation failures are collected and reported together, and the existing output directory is left intact. A successful run replaces the directory as one complete projection, so stale service modules cannot survive a source change.
 
 Every successful output contains:
 
-- generated operation modules and an `index.ts` barrel with a provenance header;
+- generated resource service modules and a namespace `index.ts` barrel;
 - `coverage.json`, a deterministic record of the specification identity, applied patches, deprecations, unsupported operations, failures, and totals by HTTP method; and
-- query, path, and header traits that retain their exact wire names.
+- lazily constructed request and response schemas using `S.suspend`; and
+- query, path, header, body, method, and response traits that retain exact wire names.
+
+Generated inputs keep path, query, and header members at the top level. A JSON
+request body is nested under `body` and marked with `T.HttpBody()`, matching the
+Protocol operation shape used by Alchemy.
 
 The function returns the same coverage value written to disk:
 

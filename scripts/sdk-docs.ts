@@ -29,7 +29,7 @@ sidebar:
   order: 2
 ---
 
-All Distilled SDKs are independently versioned preview releases. Operation counts refer to generated operation modules, not every exported schema or type.
+All Distilled SDKs are independently versioned preview releases. Operation counts refer to generated operations grouped into resource service modules, not every exported schema or type.
 
 | SDK | Version | Operations | Authoritative input | Authentication |
 | --- | ---: | ---: | --- | --- |
@@ -68,6 +68,9 @@ for (const sdk of manifest) {
     `badge: ${sdk.version}`,
     `${sdk.operations.toLocaleString("en-US")} operations`,
     `https://www.npmjs.com/package/${sdk.package}`,
+    "CredentialsFromEnv",
+    "Services.",
+    sdk.id === "slack" ? "SlackProtocolLive" : "FetchHttpClient.layer",
   ];
   for (const value of required) {
     if (!page.includes(value)) {

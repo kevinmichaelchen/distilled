@@ -9,7 +9,7 @@ seo:
   title: Announcing the Effect-native Distilled GitHub SDK
 ---
 
-GitHub automation lives on the critical path of modern delivery: repository policy, issues, pull requests, checks, releases, deployments, and security operations. [`@kevinmichaelchen/distilled-github`](https://www.npmjs.com/package/@kevinmichaelchen/distilled-github) brings that REST surface into Effect with runtime validation and explicit failure behavior.
+GitHub automation lives on the critical path of modern delivery: repository policy, issues, pull requests, checks, releases, deployments, and security operations. [`@kevinmichaelchen/distilled-github`](https://www.npmjs.com/package/@kevinmichaelchen/distilled-github) brings that REST surface into Effect with explicit dependencies and failure behavior.
 
 ## GitHub, at a glance
 
@@ -24,7 +24,7 @@ GitHub automation lives on the critical path of modern delivery: repository poli
 
 ## Why Effect and Distilled?
 
-GitHub workflows combine network calls with branching policy: look up repository state, create or update an issue, wait on checks, respect primary and secondary rate limits, and surface useful diagnostics. Effect makes dependencies, concurrency, retries, timeouts, cancellation, and tracing composable. Distilled adds decoded GitHub error envelopes, version headers, secret redaction, runtime schemas, and categorized retries.
+GitHub workflows combine network calls with branching policy: look up repository state, create or update an issue, wait on checks, respect primary and secondary rate limits, and surface useful diagnostics. Effect makes dependencies, concurrency, retries, timeouts, cancellation, and tracing composable. Distilled adds GitHub error-envelope handling, version headers, secret redaction, generated schema traits, and categorized retries.
 
 Because generated operations are committed, a GitHub API update produces a reviewable source diff. You can see which request or response types changed before releasing the next package.
 
@@ -33,7 +33,7 @@ Because generated operations are committed, a GitHub API update produces a revie
 <Steps>
   <Step title="Use GitHub's own contract">The source mirror extracts an exact versioned bundle from `github/rest-api-description` rather than inventing a smaller community schema.</Step>
   <Step title="Keep source history bounded">The compact mirror avoids dragging a large upstream repository and its history into every consumer SDK checkout.</Step>
-  <Step title="Generate through the shared factory">The Alchemy-derived OpenAPI generator emits runtime schemas and yieldable Effect operations; GitHub-specific auth, errors, and retry policy stay handwritten.</Step>
+  <Step title="Generate through the shared factory">The Protocol generator emits schema-described, yieldable Effect operations grouped by resource; GitHub-specific auth, errors, and retry policy stay handwritten.</Step>
   <Step title="Release by workload identity">The private repository publishes through its dedicated GitHub Actions workflow and npm OIDC trust.</Step>
 </Steps>
 
@@ -65,9 +65,7 @@ import * as Layer from "effect/Layer";
 import * as FetchHttpClient from "effect/unstable/http/FetchHttpClient";
 import {
   CredentialsFromEnv,
-  issuesListForRepo,
-  pullsCreate,
-  reposGet,
+  Services,
 } from "@kevinmichaelchen/distilled-github";
 
 const GitHubLive = Layer.mergeAll(FetchHttpClient.layer, CredentialsFromEnv);
@@ -82,7 +80,7 @@ With `GitHubLive` in scope, you can automate repositories, issues, pull requests
 Read repository metadata before deciding whether a workflow should inspect issues, create branches, or trigger another automation.
 
 ```ts
-const inspectRepository = reposGet({
+const inspectRepository = Services.repos.reposGet({
   owner: "acme",
   repo: "payments",
 }).pipe(Effect.provide(GitHubLive));
@@ -93,7 +91,7 @@ const inspectRepository = reposGet({
 Build triage queues from open issues filtered by labels and ordered by recent activity.
 
 ```ts
-const listOpenIssues = issuesListForRepo({
+const listOpenIssues = Services.issues.issuesListForRepo({
   owner: "acme",
   repo: "payments",
   state: "open",
@@ -109,14 +107,16 @@ const listOpenIssues = issuesListForRepo({
 Turn a prepared branch into a reviewable pull request from a release bot or repository automation.
 
 ```ts
-const openPullRequest = pullsCreate({
+const openPullRequest = Services.pulls.pullsCreate({
   owner: "acme",
   repo: "payments",
-  title: "Reduce checkout latency",
-  head: "automation/checkout-cache",
-  base: "main",
-  body: "Adds a bounded cache around the pricing lookup.",
-  draft: true,
+  body: {
+    title: "Reduce checkout latency",
+    head: "automation/checkout-cache",
+    base: "main",
+    body: "Adds a bounded cache around the pricing lookup.",
+    draft: true,
+  },
 }).pipe(Effect.provide(GitHubLive));
 ```
 

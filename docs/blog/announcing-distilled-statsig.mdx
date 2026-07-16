@@ -24,7 +24,7 @@ Feature delivery becomes far more powerful when configuration is programmable: t
 
 ## Why Effect and Distilled?
 
-Feature-management automation is policy automation. It deserves explicit failures, bounded retries, auditable inputs, and observable execution—especially when a script can enable a gate or start an experiment. Effect makes those controls composable. Distilled validates the API boundary, injects the Console API key as a redacted dependency, sends the pinned version header, decodes Statsig errors, and preserves retry guidance.
+Feature-management automation is policy automation. It deserves explicit failures, bounded retries, auditable inputs, and observable execution—especially when a script can enable a gate or start an experiment. Effect makes those controls composable. Distilled describes the API boundary with generated schemas, injects the Console API key as a redacted dependency, sends the pinned version header, handles Statsig errors, and preserves retry guidance.
 
 The type signature shows what an operation needs and how it can fail. That makes destructive or rollout-changing programs easier to review than a chain of loosely typed HTTP calls.
 
@@ -65,9 +65,7 @@ import * as Layer from "effect/Layer";
 import * as FetchHttpClient from "effect/unstable/http/FetchHttpClient";
 import {
   CredentialsFromEnv,
-  experimentsListExperiments,
-  gatesCreateGate,
-  gatesListGates,
+  Services,
 } from "@kevinmichaelchen/distilled-statsig";
 
 const StatsigLive = Layer.mergeAll(FetchHttpClient.layer, CredentialsFromEnv);
@@ -82,7 +80,7 @@ With `StatsigLive` in scope, you can manage gates, experiments, metrics, segment
 List temporary gates for a cleanup report or ownership review.
 
 ```ts
-const temporaryGates = gatesListGates({
+const temporaryGates = Services.gates.gatesListGates({
   type: "TEMPORARY",
   includeArchived: "false",
   limit: 100,
@@ -96,14 +94,16 @@ const auditTemporaryGates = temporaryGates.pipe(Effect.provide(StatsigLive));
 Provision a disabled temporary gate that can move through review and rollout policy before receiving traffic.
 
 ```ts
-const createCheckoutGate = gatesCreateGate({
-  id: "checkout-redesign",
-  name: "Checkout redesign",
-  description: "Controls the new checkout experience.",
-  type: "TEMPORARY",
-  isEnabled: false,
-  tags: ["checkout", "web"],
-  idType: "userID",
+const createCheckoutGate = Services.gates.gatesCreateGate({
+  body: {
+    id: "checkout-redesign",
+    name: "Checkout redesign",
+    description: "Controls the new checkout experience.",
+    type: "TEMPORARY",
+    isEnabled: false,
+    tags: ["checkout", "web"],
+    idType: "userID",
+  },
 }).pipe(Effect.provide(StatsigLive));
 ```
 
@@ -112,7 +112,7 @@ const createCheckoutGate = gatesCreateGate({
 Build an experiment inventory for dashboards, governance, or automated health checks.
 
 ```ts
-const listActiveExperiments = experimentsListExperiments({
+const listActiveExperiments = Services.experiments.experimentsListExperiments({
   status: "active",
   fields: ["id", "name", "status", "teamID", "createdTime"],
   limit: 100,

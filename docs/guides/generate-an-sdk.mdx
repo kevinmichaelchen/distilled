@@ -17,14 +17,14 @@ Choose the source strategy before writing generator code. The authority and shap
   <Step title="Document semantic patches">
     Keep unavoidable RFC 6902 transformations small, named, and reviewable. Never silently mutate the source.
   </Step>
-  <Step title="Generate operations">
-    Emit Effect schemas, HTTP traits, categories, and yieldable operations through the shared generator.
+  <Step title="Generate services">
+    Emit Effect schemas, HTTP traits, and explicitly typed yieldable operations grouped into resource services.
   </Step>
   <Step title="Add provider behavior">
-    Implement credentials, client wiring, error mapping, retry policy, and any pagination conventions in the provider repository.
+    Implement credentials, a Protocol layer, error mapping, retry policy, and any pagination conventions in the provider repository.
   </Step>
   <Step title="Prove determinism">
-    Regenerate and fail when committed operations or `coverage.json` drift. Review method totals and unsupported operations, and test generator adaptations with focused request-shape fixtures.
+    Regenerate and fail when committed services or `coverage.json` drift. Review method totals and unsupported operations, and test generator adaptations with focused request-shape fixtures.
   </Step>
   <Step title="Publish independently">
     Release the provider package from its own trusted GitHub workflow.
@@ -39,7 +39,10 @@ import { generateFromOpenAPI } from "@kevinmichaelchen/distilled/openapi/generat
 generateFromOpenAPI({
   specPath: "specs/provider/specs/openapi.json",
   patchDir: "patches",
-  outputDir: "src/operations",
+  outputDir: "src/services",
+  protocolName: "ExampleProtocol",
+  operationErrorType: "ExampleOpError",
+  operationContextType: "ExampleOpContext",
 });
 ```
 

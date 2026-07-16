@@ -3,13 +3,13 @@ title: Avalara AvaTax SDK
 description: Install, authenticate, and calculate tax with Effect-native AvaTax REST v2 operations.
 sidebar:
   icon: receipt-text
-  badge: 0.1.2
+  badge: 0.2.0
   order: 6
 ---
 
 <Badge variant="success">Public package</Badge> <Badge>Swagger 2</Badge> <Badge>470 operations</Badge>
 
-The AvaTax SDK pins Avalara's official REST v2 Swagger document and adds only the authentication, error, retry, and client-header behavior that belongs at the provider boundary.
+The AvaTax SDK pins Avalara's official REST v2 Swagger document and keeps authentication, errors, retries, and the `X-Avalara-Client` header in its provider Protocol.
 
 ## Install
 
@@ -47,12 +47,12 @@ import * as Layer from "effect/Layer";
 import * as FetchHttpClient from "effect/unstable/http/FetchHttpClient";
 import {
   CredentialsFromEnv,
-  taxRatesByAddress,
+  Services,
 } from "@kevinmichaelchen/distilled-avalara";
 
 const AvaTaxLive = Layer.mergeAll(FetchHttpClient.layer, CredentialsFromEnv);
 
-const program = taxRatesByAddress({
+const program = Services.tax_content.taxRatesByAddress({
   line1: "100 Market Street",
   city: "Philadelphia",
   region: "PA",
@@ -74,7 +74,7 @@ The same layer can validate addresses, create and reconcile transactions, manage
     Public package, generated source, declarations, and release history.
   </Card>
   <Card title="Implementation (private)" href="https://github.com/kevinmichaelchen/distilled-avalara" icon="lock-keyhole">
-    Provider policy and 470 committed Effect operations.
+    AvaTax Protocol and 470 committed operations grouped by resource.
   </Card>
   <Card title="Specification (private)" href="https://github.com/kevinmichaelchen/distilled-spec-avalara" icon="lock-keyhole">
     Immutable mirror of Avalara's official Swagger document.

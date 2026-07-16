@@ -19,7 +19,7 @@ Sensitive-data infrastructure should make security boundaries more explicit, not
   <Card title="Basis Theory" href="https://basistheory.com" icon="vault">The platform and its sensitive-data infrastructure.</Card>
   <Card title="API reference" href="https://developers.basistheory.com/docs/api/" icon="book-open">The official REST resources, permissions, and examples.</Card>
   <Card title="Official Node SDK" href="https://github.com/Basis-Theory/node-sdk" icon="github">Basis Theory's maintained JavaScript and TypeScript client.</Card>
-  <Card title="Distilled implementation" href="https://github.com/kevinmichaelchen/distilled-basis-theory" icon="code-2">Provider policy and 117 committed generated operations.</Card>
+  <Card title="Distilled implementation" href="https://github.com/kevinmichaelchen/distilled-basis-theory" icon="code-2">Provider Protocol and 117 committed operations grouped by resource.</Card>
 </CardGroup>
 
 ## Why Effect and Distilled?
@@ -33,8 +33,8 @@ Configuration is a layer rather than hidden global state. Tests can swap in a te
 <Steps>
   <Step title="Mirror the official contract">A dedicated private source repository preserves Basis Theory's production-served OpenAPI 3.0.1 document byte-for-byte at an immutable commit.</Step>
   <Step title="Pin the source as a submodule">The implementation repository records the exact mirror commit, matching Alchemy's reviewable source-boundary pattern.</Step>
-  <Step title="Generate the supported surface">The shared Alchemy-derived generator emits 117 operation modules and intentionally omits two endpoints marked deprecated upstream.</Step>
-  <Step title="Add Basis Theory policy">The handwritten layer owns production/test URLs, redacted application keys, `BT-API-KEY` injection, problem-details errors, and retry services.</Step>
+  <Step title="Generate the supported surface">The shared Protocol generator emits 117 operations grouped into resource services and intentionally omits two endpoints marked deprecated upstream.</Step>
+  <Step title="Add the Basis Theory Protocol">The handwritten Protocol owns production/test URLs, redacted application keys, `BT-API-KEY` injection, problem-details errors, and retry services.</Step>
   <Step title="Publish independently">The package builds compiled ESM and declarations for Node, exposes TypeScript source to Bun, and releases through npm with GitHub OIDC.</Step>
 </Steps>
 
@@ -66,9 +66,7 @@ import * as Layer from "effect/Layer";
 import * as FetchHttpClient from "effect/unstable/http/FetchHttpClient";
 import {
   CredentialsFromEnv,
-  tokensCreate,
-  tokensGetById,
-  tokensSearchV2,
+  Services,
 } from "@kevinmichaelchen/distilled-basis-theory";
 
 const BasisTheoryLive = Layer.mergeAll(
@@ -86,11 +84,13 @@ With `BasisTheoryLive` in scope, you can manage tokens and token intents, applic
 Create a token while keeping searchable business identifiers in non-sensitive metadata. Use only synthetic values in development and follow Basis Theory's field-specific handling rules for real payment data.
 
 ```ts
-const tokenizeSensitiveData = tokensCreate({
-  type: "token",
-  data: "synthetic-sensitive-value",
-  metadata: { customer_id: "cus_12345" },
-  fingerprint_expression: "{{ data }}",
+const tokenizeSensitiveData = Services.tokens.tokensCreate({
+  body: {
+    type: "token",
+    data: "synthetic-sensitive-value",
+    metadata: { customer_id: "cus_12345" },
+    fingerprint_expression: "{{ data }}",
+  },
 }).pipe(Effect.provide(BasisTheoryLive));
 ```
 
@@ -99,7 +99,7 @@ const tokenizeSensitiveData = tokensCreate({
 Read one known token as part of a controlled workflow. The application key still needs the appropriate token permission for the token's container.
 
 ```ts
-const retrieveToken = tokensGetById({
+const retrieveToken = Services.tokens.tokensGetById({
   id: "token-id-from-your-database",
 }).pipe(Effect.provide(BasisTheoryLive));
 ```
@@ -109,9 +109,11 @@ const retrieveToken = tokensGetById({
 Use Basis Theory's Lucene-based token search to locate records by exact metadata without fetching the entire vault. Search indexes should be designed sparingly because indexed values become discoverable to applications with `token:search` permission.
 
 ```ts
-const searchVault = tokensSearchV2({
-  query: "metadata.customer_id:cus_12345",
-  size: 20,
+const searchVault = Services.tokens.tokensSearchV2({
+  body: {
+    query: "metadata.customer_id:cus_12345",
+    size: 20,
+  },
 }).pipe(Effect.provide(BasisTheoryLive));
 ```
 

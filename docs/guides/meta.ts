@@ -7,7 +7,7 @@ export default defineMeta({
   pages: [
     "index",
     "architecture",
-    "runtime-parity",
+    "protocol-architecture",
     "generate-an-sdk",
     "publishing",
   ],

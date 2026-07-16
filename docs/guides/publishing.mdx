@@ -35,6 +35,9 @@ The GitHub repositories are private. npm trusted publishing still works, but npm
 
 ## Release posture
 
-The workflow typechecks, tests, builds, and publishes. Full spec regeneration remains a source-maintenance check because GitHub's repository token intentionally cannot read sibling private spec repositories. This avoids introducing a cross-repository personal access token merely to publish already-reviewed generated code.
+Before committing a release, regenerate from the pinned source and run the
+local drift check. The GitHub workflow then typechecks, tests, builds, and
+publishes the committed projection. Private source mirrors are not exposed to
+the package workflow, and publishing does not require a long-lived npm token.
 
 [Read npm's trusted publishing documentation](https://docs.npmjs.com/trusted-publishers/).

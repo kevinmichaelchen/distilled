@@ -1,7 +1,11 @@
+export * as API from "./api.ts";
 export * as Category from "./category.ts";
+export * as ErrorCategory from "./error-category.ts";
 export * as Errors from "./errors.ts";
+export * as JsonPatch from "./json-patch.ts";
 export * as Pagination from "./pagination.ts";
+export * as ProtocolHttp from "./protocol-http.ts";
+export * as RetryAfter from "./retry-after.ts";
 export * as Retry from "./retry.ts";
-export * as Sensitive from "./sensitive.ts";
-export * as Traits from "./traits.ts";
-export { makeAPI } from "./client.ts";
+export * as Schema from "./schema.ts";
+export * as Trait from "./trait.ts";

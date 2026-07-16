@@ -1,27 +1,33 @@
 # distilled
 
-Shared infrastructure for Kevin's standalone Distilled SDK repositories.
+Shared protocol engine and generators for Kevin's standalone Distilled SDKs.
 
-This package intentionally pins and re-exports `@distilled.cloud/core@0.29.0`, the runtime maintained in Alchemy's `distilled` monorepo. Keeping the façade thin gives the standalone repositories the topology requested here while preserving Alchemy's actual Effect 4 behavior:
+`@kevinmichaelchen/distilled` follows Alchemy's current protocol architecture:
 
-- Runtime `Schema.Codec` request and response validation.
-- HTTP traits consumed by `API.make` and `API.makePaginated`.
-- Yieldable operations, pagination streams, retry policies, categorized errors, sensitive fields, tracing, and debug logging.
-- Deterministic OpenAPI 2/3 generation with documented RFC 6902 patch envelopes.
+- `API.make` creates callable, yieldable Effect operations.
+- Schema traits describe paths, query parameters, headers, bodies, response
+  fields, and error matchers.
+- Provider-owned Protocol layers supply credentials, base URLs, wire formats,
+  and error decoding for every request.
+- Pagination streams and retry policy are shared while provider policy remains
+  local to each SDK.
+- The OpenAPI 2/3 generator emits resource service modules with explicit
+  operation error and context types.
 
-Vendor repositories import subpaths such as `@kevinmichaelchen/distilled/client` and `@kevinmichaelchen/distilled/openapi/generate`. No forked runtime code lives here. `scripts/generate-openapi.ts` is vendored from audited Alchemy commit `bf5f2b4` because `@distilled.cloud/core@0.29.0` declares that export but omits `scripts/` from its published npm files. Local adaptations are limited to regression-tested, cross-vendor generator fixes; the first quotes non-identifier OpenAPI parameter names such as GitHub's `enterprise-team`. Upgrades are deliberate diffs against Alchemy's source.
+Provider packages contain handwritten `credentials.ts`, `errors.ts`,
+`traits.ts`, `protocol.ts`, `pagination.ts` when needed, and `retry.ts`. Their
+generated `services/` directories are complete projections of exact source
+pins plus reviewed RFC 6902 patches.
 
-See [ARCHITECTURE.md](./ARCHITECTURE.md) for the source-strategy decision rule and repository topology.
+See [ARCHITECTURE.md](./ARCHITECTURE.md) for the repository topology and source
+decision rule.
 
 ## Documentation
 
-The Distilled software factory, SDK catalog, architecture guides, blog, and
-changelog are published at
+The SDK catalog, architecture guides, blog, and changelog are published at
 [kevinmichaelchen.github.io/distilled](https://kevinmichaelchen.github.io/distilled/).
-GitHub Pages deployment is gated by the repository variable
-`ENABLE_GITHUB_PAGES`.
 
-Run `bun run docs:dev` to work on the Blume site locally, or
-`bun run docs:build` to produce the static site in `dist/`.
-`docs/sdk-manifest.json` is the canonical source for public SDK versions and
-operation counts; run `bun run docs:generate` after changing it.
+Run `bun run docs:dev` to work on the Blume site locally or
+`bun run docs:build` to build it. `docs/sdk-manifest.json` is the canonical
+source for public SDK versions and operation counts; run
+`bun run docs:generate` after changing it.

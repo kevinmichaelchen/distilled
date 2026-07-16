@@ -1,30 +1,42 @@
 # Software factory architecture
 
-This workspace follows the architecture observed at the current HEAD of Alchemy's `distilled`, `distilled-spec-neon`, and `distilled-neon` repositories.
+The shared package and provider SDKs follow Alchemy's current Distilled
+protocol architecture.
 
 ## Stable boundary
 
-`distilled` pins Alchemy's Effect 4 core runtime and owns only shared generator adaptations. Each vendor SDK owns credentials, error mapping, retries, patches, generated operations, and an exact upstream source pin.
+`distilled` owns the provider-neutral Effect runtime, HTTP traits, protocol
+contracts, pagination, retry semantics, common error categories, and OpenAPI
+generation. Each provider owns credentials, its Protocol layer, error-envelope
+decoding, retry tag, optional pagination policy, patches, and generated service
+modules.
+
+Generated operations contain schemas and traits, but no handwritten transport
+logic. `API.make` asks the provider Protocol to encode a request and decode its
+response.
 
 ## Source decision rule
 
-| Upstream API source | Repository strategy | Generator strategy | Example |
+| Authoritative source | Repository strategy | Generator strategy | Example |
 | --- | --- | --- | --- |
-| Maintained OpenAPI document | Small immutable-history mirror, pinned as an SDK submodule | Shared Alchemy OpenAPI generator | JIRA |
-| Maintained OpenAPI repository too large for practical downstream submodules | Mirror only the exact bundled document consumed by generation | Shared Alchemy OpenAPI generator | GitHub |
-| No maintained OpenAPI, but an official typed SDK exists | Pin the official SDK directly as an SDK submodule | Vendor-specific TypeScript AST generator | Slack |
+| Maintained OpenAPI document | Small mirror pinned as an SDK submodule | Shared OpenAPI-to-Protocol generator | Jira |
+| Maintained OpenAPI repository too large for a practical submodule | Mirror the exact bundled document | Shared OpenAPI-to-Protocol generator | GitHub |
+| No maintained OpenAPI, but an official typed SDK exists | Pin the official SDK directly | Provider-specific typed-source generator | Slack |
 
-Do not create a `distilled-spec-*` mirror when the official source repository itself is the compact, authoritative input. Do not scrape documentation into a pseudo-spec when a maintained typed SDK is available.
+Do not scrape prose into a pseudo-spec when a maintained machine-readable or
+typed source exists.
 
 ## Repository topology
 
 ```text
-distilled                         shared Effect 4 runtime façade + generators
+distilled                         protocol engine + generators
 ├── distilled-spec-jira          official Atlassian OpenAPI mirror
-│   └── distilled-jira           pinned spec + patches + generated operations
-├── distilled-spec-github        official versioned GitHub OpenAPI bundle mirror
-│   └── distilled-github         pinned spec + patches + generated operations
-└── distilled-slack              pinned slackapi/node-slack-sdk + AST-generated operations
+│   └── distilled-jira           Protocol + patches + generated services
+├── distilled-spec-github        official GitHub OpenAPI bundle mirror
+│   └── distilled-github         Protocol + patches + generated services
+└── distilled-slack              official typed SDK + generated services
 ```
 
-Generated files are committed so source changes are reviewable. CI regenerates and fails on drift. Spec/source updates advance explicit submodule commits rather than following a moving branch at SDK build time.
+Generated files are committed. CI regenerates and fails on drift. Source
+updates advance exact submodule commits rather than following a moving branch
+at build time.

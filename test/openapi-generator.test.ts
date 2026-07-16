@@ -1,120 +1,178 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { access, mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
-import { pathToFileURL } from "node:url";
+import { join } from "node:path";
 import {
   generateFromOpenAPI,
   OpenAPIGenerationError,
+  type GeneratorConfig,
 } from "../scripts/generate-openapi.ts";
-import * as T from "../src/traits.ts";
 
 const roots: string[] = [];
 afterEach(async () => {
-  await Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true })));
+  await Promise.all(
+    roots.splice(0).map((root) => rm(root, { recursive: true, force: true })),
+  );
 });
 
-const writeClientStub = async (root: string): Promise<string> => {
-  await symlink(resolve("node_modules"), join(root, "node_modules"), "dir");
-  const clientPath = join(root, "client.ts");
-  await writeFile(
-    clientPath,
-    `export const API = {
-  make: (makeConfig: () => unknown) => makeConfig(),
-  makePaginated: (makeConfig: () => unknown) => makeConfig(),
-};
-`,
-  );
-  return clientPath.slice(0, -3);
+const fixture = async (spec: unknown) => {
+  const root = await mkdtemp(join(tmpdir(), "distilled-openapi-"));
+  roots.push(root);
+  const specPath = join(root, "openapi.json");
+  const patchDir = join(root, "patches");
+  const outputDir = join(root, "services");
+  await mkdir(patchDir);
+  await writeFile(specPath, JSON.stringify(spec));
+  const config: GeneratorConfig = {
+    specPath,
+    patchDir,
+    outputDir,
+    importPrefix: "..",
+    protocolName: "TestProtocol",
+    paginatedProtocolName: "TestPaginatedProtocol",
+    operationErrorType: "TestOpError",
+    operationContextType: "TestOpContext",
+    includeOperationErrors: true,
+    statusToErrorClass: { "400": "BadRequest" },
+    defaultErrorStatuses: new Set(),
+  };
+  return { root, outputDir, config };
 };
 
-const importGenerated = async (filePath: string): Promise<Record<string, any>> =>
-  import(`${pathToFileURL(filePath).href}?test=${crypto.randomUUID()}`);
-
-describe("OpenAPI generator adaptations", () => {
-  test("quotes non-identifier parameter names in runtime structs", async () => {
-    const root = await mkdtemp(join(tmpdir(), "distilled-openapi-"));
-    roots.push(root);
-    const specPath = join(root, "openapi.json");
-    const outputDir = join(root, "operations");
-    const patchDir = join(root, "patches");
-    await mkdir(patchDir);
-    await Bun.write(specPath, JSON.stringify({
-      openapi: "3.0.3",
-      info: { title: "test", version: "1" },
+describe("OpenAPI service generator", () => {
+  test("groups operations by primary tag and emits the beta operation contract", async () => {
+    const { outputDir, config } = await fixture({
+      openapi: "3.1.0",
+      info: { title: "Example", version: "1" },
       paths: {
         "/teams/{enterprise-team}": {
           get: {
-            operationId: "teams/get",
-            parameters: [{ name: "enterprise-team", in: "path", required: true, schema: { type: "string" } }],
+            tags: ["Team Management"],
+            operationId: "teams.get",
+            parameters: [
+              {
+                name: "enterprise-team",
+                in: "path",
+                required: true,
+                schema: { type: "string" },
+              },
+              {
+                name: "page-size",
+                in: "query",
+                schema: { type: "integer" },
+              },
+              {
+                name: "X-Trace-Id",
+                in: "header",
+                required: true,
+                schema: { type: "string" },
+              },
+            ],
+            responses: {
+              "200": {
+                description: "ok",
+                content: {
+                  "application/json": {
+                    schema: {
+                      type: "object",
+                      properties: { id: { type: "string" } },
+                    },
+                  },
+                },
+              },
+              "400": { description: "bad request" },
+            },
+          },
+        },
+      },
+    });
+
+    const coverage = generateFromOpenAPI(config);
+    const generated = await readFile(
+      join(outputDir, "team_management.ts"),
+      "utf8",
+    );
+    expect(generated).toContain(
+      'import * as S from "@kevinmichaelchen/distilled/schema"',
+    );
+    expect(generated).toContain(
+      "export const TeamsGetInput = /*@__PURE__*/ S.suspend(() =>",
+    );
+    expect(generated).toContain(
+      ').annotate({ identifier: "TeamsGetInput" }) as unknown as S.Codec<TeamsGetInput>;',
+    );
+    expect(generated).toContain(
+      'T.Http({ method: "GET", uri: "/teams/{enterprise-team}", code: 200 })',
+    );
+    expect(generated).toContain('T.Label("enterprise-team")');
+    expect(generated).toContain('T.Query("page-size")');
+    expect(generated).toContain('T.Header("X-Trace-Id")');
+    expect(generated).toContain("export type TeamsGetError = BadRequest | TestOpError");
+    expect(generated).toContain("export const teamsGet: API.OperationMethod<");
+    expect(generated).toContain("input: TeamsGetInput");
+    expect(generated).toContain("output: TeamsGetOutput");
+    expect(generated).toContain("protocol: TestProtocol");
+    expect(generated).toContain("retry: Retry.Retry");
+    expect(await readFile(join(outputDir, "index.ts"), "utf8")).toContain(
+      'export * as team_management from "./team_management.ts";',
+    );
+    expect(coverage.operations.generated).toBe(1);
+  });
+
+  test("derives missing operation names and supports every HTTP method", async () => {
+    const operations = Object.fromEntries(
+      ["get", "post", "put", "patch", "delete", "head", "options", "trace"].map(
+        (method) => [
+          method,
+          {
+            tags: ["Probe"],
+            summary: `${method} probe`,
             responses: { "204": { description: "ok" } },
           },
-        },
-      },
-    }));
-
-    await generateFromOpenAPI({ specPath, patchDir, outputDir, importPrefix: ".." });
-    const generated = await readFile(join(outputDir, "teamsGet.ts"), "utf8");
-    expect(generated).toContain('"enterprise-team": Schema.String.pipe(T.PathParam())');
-    expect(generated).toContain("export const teamsGet");
+        ],
+      ),
+    );
+    const { outputDir, config } = await fixture({
+      openapi: "3.1.0",
+      info: { title: "Probe", version: "1" },
+      paths: { "/probe": operations },
+    });
+    const coverage = generateFromOpenAPI(config);
+    const generated = await readFile(join(outputDir, "probe.ts"), "utf8");
+    for (const method of [
+      "GET",
+      "POST",
+      "PUT",
+      "PATCH",
+      "DELETE",
+      "HEAD",
+      "OPTIONS",
+      "TRACE",
+    ]) {
+      expect(generated).toContain(`method: "${method}"`);
+      expect(coverage.operations.byMethod[method as keyof typeof coverage.operations.byMethod].generated).toBe(1);
+    }
+    expect(generated.match(/retry: Retry\.Retry/g)).toHaveLength(4);
+    expect(coverage.operations.generated).toBe(8);
   });
 
-  test("derives stable operation names when a vendor omits operationId", async () => {
-    const root = await mkdtemp(join(tmpdir(), "distilled-openapi-"));
-    roots.push(root);
-    const specPath = join(root, "openapi.json");
-    const outputDir = join(root, "operations");
-    const patchDir = join(root, "patches");
-    await mkdir(patchDir);
-    await Bun.write(specPath, JSON.stringify({
+  test("emits direct Redacted schemas", async () => {
+    const { outputDir, config } = await fixture({
       openapi: "3.0.3",
-      info: { title: "test", version: "1" },
+      info: { title: "Secrets", version: "1" },
       paths: {
-        "/console/v1/alerts": {
-          get: {
-            tags: ["Alerts"],
-            summary: "List Topline Alerts",
-            responses: { "200": { description: "ok" } },
-          },
-        },
-      },
-    }));
-
-    await generateFromOpenAPI({ specPath, patchDir, outputDir, importPrefix: ".." });
-    const generated = await readFile(join(outputDir, "alertsListToplineAlerts.ts"), "utf8");
-    expect(generated).toContain("export const alertsListToplineAlerts");
-    expect(generated).toContain('path: "/console/v1/alerts"');
-  });
-
-  test("routes OAS3 query and header parameters outside a POST body", async () => {
-    const root = await mkdtemp(join(tmpdir(), "distilled-openapi-"));
-    roots.push(root);
-    const specPath = join(root, "openapi.json");
-    const outputDir = join(root, "operations");
-    const patchDir = join(root, "patches");
-    await mkdir(patchDir);
-    const clientImport = await writeClientStub(root);
-    await Bun.write(specPath, JSON.stringify({
-      openapi: "3.0.3",
-      info: { title: "test", version: "1" },
-      paths: {
-        "/issues": {
+        "/tokens": {
           post: {
-            operationId: "issues.create",
-            parameters: [
-              { name: "updateHistory", in: "query", schema: { type: "boolean" } },
-              { name: "Atlassian-Transfer-Id", in: "header", required: true, schema: { type: "string" } },
-            ],
+            tags: ["Tokens"],
+            operationId: "tokens.create",
             requestBody: {
               required: true,
               content: {
                 "application/json": {
                   schema: {
                     type: "object",
-                    required: ["fields"],
-                    properties: {
-                      fields: { type: "object", additionalProperties: true },
-                    },
+                    required: ["api_key"],
+                    properties: { api_key: { type: "string" } },
                   },
                 },
               },
@@ -123,252 +181,140 @@ describe("OpenAPI generator adaptations", () => {
           },
         },
       },
-    }));
-
-    generateFromOpenAPI({
-      specPath,
-      patchDir,
-      outputDir,
-      importPrefix: "..",
-      clientImport,
-      traitsImport: resolve("src/traits"),
     });
-
-    const generatedPath = join(outputDir, "issuesCreate.ts");
-    const generated = await readFile(generatedPath, "utf8");
-    expect(generated).toContain(
-      'updateHistory: Schema.optional(Schema.Boolean).pipe(T.QueryParam("updateHistory"))',
-    );
-    expect(generated).toContain(
-      '"Atlassian-Transfer-Id": Schema.String.pipe(T.HeaderParam("Atlassian-Transfer-Id"))',
-    );
-
-    const module = await importGenerated(generatedPath);
-    const inputSchema = module.IssuesCreateInput;
-    const parts = T.buildRequestParts(
-      inputSchema.ast,
-      T.getHttpTrait(inputSchema.ast)!,
-      {
-        updateHistory: true,
-        "Atlassian-Transfer-Id": "transfer-123",
-        fields: { summary: "Generated request shape" },
-      },
-      inputSchema,
-    );
-    expect(parts.query).toEqual({ updateHistory: "true" });
-    expect(parts.headers).toEqual({
-      "Atlassian-Transfer-Id": "transfer-123",
-    });
-    expect(parts.body).toEqual({
-      fields: { summary: "Generated request shape" },
-    });
+    generateFromOpenAPI(config);
+    const generated = await readFile(join(outputDir, "tokens.ts"), "utf8");
+    expect(generated).toContain("api_key: S.Redacted(S.String)");
+    expect(generated).toContain("api_key: Redacted.Redacted<string>");
+    expect(generated).not.toContain("SensitiveString");
+    expect(generated).not.toContain("sensitive.ts");
   });
 
-  test("annotates Swagger 2 query and header parameters with wire names", async () => {
-    const root = await mkdtemp(join(tmpdir(), "distilled-openapi-"));
-    roots.push(root);
-    const specPath = join(root, "swagger.json");
-    const outputDir = join(root, "operations");
-    const patchDir = join(root, "patches");
-    await mkdir(patchDir);
-    await Bun.write(specPath, JSON.stringify({
-      swagger: "2.0",
-      info: { title: "test", version: "1" },
+  test("emits typed paginated methods and the paginated protocol", async () => {
+    const { outputDir, config } = await fixture({
+      openapi: "3.0.3",
+      info: { title: "Lists", version: "1" },
       paths: {
-        "/search": {
-          post: {
-            operationId: "search.run",
+        "/widgets": {
+          get: {
+            tags: ["Widgets"],
+            operationId: "widgets.list",
             parameters: [
-              { name: "page-size", in: "query", type: "integer" },
-              { name: "X-Trace-Id", in: "header", type: "string", required: true },
-              {
-                name: "body",
-                in: "body",
-                schema: {
-                  type: "object",
-                  properties: { phrase: { type: "string" } },
+              { name: "next_token", in: "query", schema: { type: "string" } },
+            ],
+            responses: {
+              "200": {
+                description: "ok",
+                content: {
+                  "application/json": {
+                    schema: {
+                      type: "object",
+                      properties: {
+                        widgets: { type: "array", items: { type: "string" } },
+                        next_token: { type: "string", nullable: true },
+                      },
+                    },
+                  },
                 },
               },
-            ],
-            responses: { "204": { description: "ok" } },
+            },
           },
         },
       },
-    }));
-
-    generateFromOpenAPI({ specPath, patchDir, outputDir, importPrefix: ".." });
-    const generated = await readFile(join(outputDir, "searchRun.ts"), "utf8");
-    expect(generated).toContain(
-      '"page-size": Schema.optional(Schema.Number).pipe(T.QueryParam("page-size"))',
-    );
-    expect(generated).toContain(
-      '"X-Trace-Id": Schema.String.pipe(T.HeaderParam("X-Trace-Id"))',
-    );
+    });
+    generateFromOpenAPI(config);
+    const generated = await readFile(join(outputDir, "widgets.ts"), "utf8");
+    expect(generated).toContain("API.PaginatedOperationMethod<");
+    expect(generated).toContain("API.makePaginated");
+    expect(generated).toContain("protocol: TestPaginatedProtocol");
+    expect(generated).toContain('pagination: { mode: "token"');
   });
 
-  test("generates HEAD, OPTIONS, and TRACE with deterministic coverage", async () => {
-    const root = await mkdtemp(join(tmpdir(), "distilled-openapi-"));
-    roots.push(root);
-    const specPath = join(root, "openapi.json");
-    const outputDir = join(root, "operations");
-    const patchDir = join(root, "patches");
-    await mkdir(patchDir);
-    const clientImport = await writeClientStub(root);
-    await Bun.write(specPath, JSON.stringify({
-      openapi: "3.1.0",
-      info: { title: "method probe", version: "2026-07" },
-      paths: {
-        "/probe": {
-          head: {
-            operationId: "probe.head",
-            responses: { "204": { description: "ok" } },
-          },
-          options: {
-            operationId: "probe.options",
-            responses: { "204": { description: "ok" } },
-          },
-          trace: {
-            operationId: "probe.trace",
-            responses: { "204": { description: "ok" } },
-          },
-        },
-        "/legacy": {
-          get: {
-            operationId: "legacy.get",
-            deprecated: true,
-            responses: { "204": { description: "ok" } },
-          },
-        },
-      },
-    }));
-
-    const coverage = generateFromOpenAPI({
-      specPath,
-      patchDir,
-      outputDir,
-      importPrefix: "..",
-      clientImport,
-      traitsImport: resolve("src/traits"),
-    });
-
-    expect(await readFile(join(outputDir, "probeHead.ts"), "utf8")).toContain(
-      'T.Http({ method: "HEAD", path: "/probe" })',
-    );
-    expect(await readFile(join(outputDir, "probeOptions.ts"), "utf8")).toContain(
-      'method: "OPTIONS" as unknown as T.HttpMethod',
-    );
-    expect(await readFile(join(outputDir, "probeTrace.ts"), "utf8")).toContain(
-      'method: "TRACE" as unknown as T.HttpMethod',
-    );
-    expect(coverage.operations).toMatchObject({
-      total: 4,
-      deprecated: 1,
-      skippedDeprecated: 1,
-      attempted: 3,
-      generated: 3,
-      failed: 0,
-      unsupported: 0,
-    });
-    expect(coverage.operations.byMethod.HEAD.generated).toBe(1);
-    expect(coverage.operations.byMethod.OPTIONS.generated).toBe(1);
-    expect(coverage.operations.byMethod.TRACE.generated).toBe(1);
-    expect(
-      JSON.parse(await readFile(join(outputDir, "coverage.json"), "utf8")),
-    ).toEqual(coverage);
-
-    const optionsModule = await importGenerated(join(outputDir, "probeOptions.ts"));
-    expect(
-      T.getHttpTrait(optionsModule.ProbeOptionsInput.ast)?.method as
-        | string
-        | undefined,
-    ).toBe("OPTIONS");
-  });
-
-  test("aggregates operation failures without replacing existing output", async () => {
-    const root = await mkdtemp(join(tmpdir(), "distilled-openapi-"));
-    roots.push(root);
-    const specPath = join(root, "openapi.json");
-    const outputDir = join(root, "operations");
-    const patchDir = join(root, "patches");
-    await mkdir(patchDir);
-    await mkdir(outputDir);
-    await writeFile(join(outputDir, "sentinel.ts"), "export const sentinel = true;\n");
-    await Bun.write(specPath, JSON.stringify({
+  test("models any successful 2xx response and records its status", async () => {
+    const { outputDir, config } = await fixture({
       openapi: "3.0.3",
-      info: { title: "test", version: "1" },
+      info: { title: "Jobs", version: "1" },
+      paths: {
+        "/jobs": {
+          post: {
+            tags: ["Jobs"],
+            operationId: "jobs.start",
+            responses: {
+              "202": {
+                description: "accepted",
+                content: {
+                  "application/json": {
+                    schema: {
+                      type: "object",
+                      required: ["id"],
+                      properties: { id: { type: "string" } },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+    generateFromOpenAPI(config);
+    const generated = await readFile(join(outputDir, "jobs.ts"), "utf8");
+    expect(generated).toContain('T.Http({ method: "POST", uri: "/jobs", code: 202 })');
+    expect(generated).toContain("export interface JobsStartOutput { id: string }");
+  });
+
+  test("binds scalar and array request bodies as the whole HTTP body", async () => {
+    const { outputDir, config } = await fixture({
+      openapi: "3.0.3",
+      info: { title: "Values", version: "1" },
+      paths: {
+        "/values": {
+          put: {
+            tags: ["Values"],
+            operationId: "values.replace",
+            requestBody: {
+              required: true,
+              content: {
+                "application/json": {
+                  schema: { type: "array", items: { type: "string" } },
+                },
+              },
+            },
+            responses: { "204": { description: "ok" } },
+          },
+        },
+      },
+    });
+    generateFromOpenAPI(config);
+    const generated = await readFile(join(outputDir, "values.ts"), "utf8");
+    expect(generated).toContain("body: ReadonlyArray<string>");
+    expect(generated).toContain("body: S.Array(S.String).pipe(T.HttpBody())");
+  });
+
+  test("fails closed and leaves the previous projection untouched", async () => {
+    const { outputDir, config } = await fixture({
+      openapi: "3.0.3",
+      info: { title: "Broken", version: "1" },
       paths: {
         "/one": {
           get: {
-            operationId: "duplicate.operation",
+            operationId: "same",
             responses: { "204": { description: "ok" } },
           },
         },
         "/two": {
           get: {
-            operationId: "duplicate.operation",
-            responses: { "204": { description: "ok" } },
-          },
-        },
-        "/three": {
-          get: {
-            operationId: "duplicate.operation",
+            operationId: "same",
             responses: { "204": { description: "ok" } },
           },
         },
       },
-    }));
-
-    let failure: unknown;
-    try {
-      generateFromOpenAPI({ specPath, patchDir, outputDir, importPrefix: ".." });
-    } catch (error) {
-      failure = error;
-    }
-
-    expect(failure).toBeInstanceOf(OpenAPIGenerationError);
-    const generationError = failure as OpenAPIGenerationError;
-    expect(generationError.errors).toHaveLength(2);
-    expect(generationError.coverage.operations).toMatchObject({
-      total: 3,
-      attempted: 3,
-      generated: 1,
-      failed: 2,
     });
-    expect(await readdir(outputDir)).toEqual(["sentinel.ts"]);
-    expect(await readFile(join(outputDir, "sentinel.ts"), "utf8")).toBe(
-      "export const sentinel = true;\n",
-    );
-  });
-
-  test("removes stale generated operations before writing", async () => {
-    const root = await mkdtemp(join(tmpdir(), "distilled-openapi-"));
-    roots.push(root);
-    const specPath = join(root, "openapi.json");
-    const outputDir = join(root, "operations");
-    const patchDir = join(root, "patches");
-    await mkdir(patchDir);
     await mkdir(outputDir);
-    await writeFile(join(outputDir, "LegacyName.ts"), "export const stale = true;\n");
-    await Bun.write(specPath, JSON.stringify({
-      openapi: "3.0.3",
-      info: { title: "test", version: "1" },
-      paths: {
-        "/health": {
-          get: {
-            operationId: "Health.Check",
-            responses: { "204": { description: "ok" } },
-          },
-        },
-      },
-    }));
-
-    await generateFromOpenAPI({ specPath, patchDir, outputDir, importPrefix: ".." });
-    expect(await readFile(join(outputDir, "healthCheck.ts"), "utf8")).toContain(
-      "export const healthCheck",
+    await writeFile(join(outputDir, "sentinel.txt"), "unchanged");
+    expect(() => generateFromOpenAPI(config)).toThrow(OpenAPIGenerationError);
+    expect(await readFile(join(outputDir, "sentinel.txt"), "utf8")).toBe(
+      "unchanged",
     );
-    expect(await readFile(join(outputDir, "healthCheck.ts"), "utf8")).toStartWith(
-      "// Generated by @kevinmichaelchen/distilled.",
-    );
-    expect(access(join(outputDir, "LegacyName.ts"))).rejects.toThrow();
   });
 });

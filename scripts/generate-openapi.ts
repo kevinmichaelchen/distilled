@@ -1,15 +1,10 @@
-// @ts-nocheck -- vendored upstream Bun generator with focused, fixture-tested adaptations.
-/**
- * Vendored from alchemy-run/distilled@bf5f2b4:
- * packages/core/scripts/generate-openapi.ts
- * Licensed Apache-2.0. Keep changes reviewable against upstream.
- */
+// @ts-nocheck -- the generated contract is covered by executable fixtures.
 /**
  * Shared OpenAPI Code Generator
  *
  * Handles OpenAPI 2.0 (Swagger), 3.0, and 3.1 specs.
- * Generates Effect Schema-based TypeScript operation files with:
- * - Input schemas with Http/PathParam/QueryParam traits
+ * Generates Protocol-based Effect TypeScript service modules with:
+ * - Input schemas with Http/Label/Query/Header/Body traits
  * - Output schemas
  * - Typed error classes per operation
  * - JSDoc from spec descriptions
@@ -19,19 +14,26 @@
  *
  * @example
  * ```ts
- * import { generateFromOpenAPI } from "@distilled.cloud/core/openapi/generate";
+ * import { generateFromOpenAPI } from "@kevinmichaelchen/distilled/openapi/generate";
  *
  * generateFromOpenAPI({
  *   specPath: "specs/openapi.json",
  *   patchDir: "patches",
- *   outputDir: "src/operations",
+ *   outputDir: "src/services",
  *   importPrefix: "..",
+ *   protocolName: "ExampleProtocol",
+ *   operationErrorType: "ExampleOpError",
+ *   operationContextType: "ExampleOpContext",
  * });
  * ```
  */
 import * as fs from "fs";
 import * as path from "path";
-import { applyAllPatches } from "../src/json-patch.ts";
+import {
+  applyOperation,
+  isStaleTargetError,
+  type PatchFile,
+} from "../src/json-patch.ts";
 
 const annotatePureExportConst = (definition: string) =>
   definition.replace(
@@ -198,14 +200,33 @@ export interface GeneratorConfig {
   patchDir: string;
   /** Output directory for generated files */
   outputDir: string;
-  /** Import prefix for relative imports (e.g., ".." for operations/ -> src/) */
+  /** Import prefix for relative imports (e.g., ".." for services/ -> src/) */
   importPrefix: string;
-  /** Client import path (e.g., "../client") */
-  clientImport?: string;
-  /** Traits import path (e.g., "../traits" or "@distilled.cloud/core/traits") */
+  /** Shared API runtime import. */
+  apiImport?: string;
+  /** Shared lightweight schema import. */
+  schemaImport?: string;
+  /** Provider traits import path (usually `../traits`). */
   traitsImport?: string;
-  /** Sensitive import path */
-  sensitiveImport?: string;
+  /** Provider protocol import path (usually `../protocol`). */
+  protocolImport?: string;
+  /** Protocol layer exported by `protocolImport`. */
+  protocolName: string;
+  /** Optional protocol layer used by generated paginated operations. */
+  paginatedProtocolName?: string;
+  /** Provider-wide operation error union exported by `protocolImport`. */
+  operationErrorType: string;
+  /** Provider-wide operation context exported by `protocolImport`. */
+  operationContextType: string;
+  /** Provider retry module import path (usually `../retry`). */
+  retryImport?: string;
+  /** Retry tag expression. Defaults to `Retry.Retry`. */
+  retryTag?: string;
+  /**
+   * HTTP methods that opt into automatic retry. Defaults to safe methods only:
+   * GET, HEAD, OPTIONS, and TRACE.
+   */
+  retryMethods?: readonly UppercaseHttpMethod[];
   /** Errors import path (for operation-specific error imports) */
   errorsImport?: string;
   /** Whether to include operation-specific error imports (default: true for Swagger, false for OAS 3.x) */
@@ -216,13 +237,6 @@ export interface GeneratorConfig {
   defaultErrorStatuses?: Set<string>;
   /** Whether to skip deprecated operations (default: true) */
   skipDeprecated?: boolean;
-  /**
-   * Default `api-version` for versioned APIs (e.g. Azure ARM). When set, the
-   * generator bakes `apiVersion` into each operation's `T.Http` trait (so the
-   * client injects `?api-version=<value>` automatically) and omits the
-   * `api-version` query parameter from the generated input schema.
-   */
-  apiVersion?: string;
 }
 
 const OPENAPI_HTTP_METHODS = [
@@ -237,7 +251,7 @@ const OPENAPI_HTTP_METHODS = [
 ] as const;
 
 type OpenAPIHttpMethod = (typeof OPENAPI_HTTP_METHODS)[number];
-type UppercaseHttpMethod = Uppercase<OpenAPIHttpMethod>;
+export type UppercaseHttpMethod = Uppercase<OpenAPIHttpMethod>;
 
 export interface GenerationCoverage {
   readonly schemaVersion: 1;
@@ -288,6 +302,48 @@ export class OpenAPIGenerationError extends AggregateError {
   }
 }
 
+function applyAllPatches(
+  spec: unknown,
+  patchDir: string,
+): {
+  applied: string[];
+  skipped: string[];
+  errors: string[];
+} {
+  if (!fs.existsSync(patchDir)) return { applied: [], skipped: [], errors: [] };
+  const applied: string[] = [];
+  const skipped: string[] = [];
+  const errors: string[] = [];
+  for (const file of fs
+    .readdirSync(patchDir)
+    .filter((name) => name.endsWith(".patch.json"))
+    .sort()) {
+    let patch: PatchFile;
+    try {
+      patch = JSON.parse(
+        fs.readFileSync(path.join(patchDir, file), "utf8"),
+      ) as PatchFile;
+    } catch (error) {
+      errors.push(`${file}: ${error instanceof Error ? error.message : String(error)}`);
+      continue;
+    }
+    let changed = false;
+    for (const [index, operation] of patch.patches.entries()) {
+      try {
+        applyOperation(spec, operation);
+        changed = true;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        const detail = `${file}#${index + 1}: ${message}`;
+        if (isStaleTargetError(message)) skipped.push(detail);
+        else errors.push(detail);
+      }
+    }
+    if (changed) applied.push(file);
+  }
+  return { applied, skipped, errors };
+}
+
 // ============================================================================
 // Utility Functions
 // ============================================================================
@@ -307,18 +363,39 @@ function toPascalCase(s: string): string {
   return capitalize(toCamelCase(s));
 }
 
+function toSnakeCase(s: string): string {
+  const snake = s
+    .replace(/([a-z0-9])([A-Z])/g, "$1_$2")
+    .replace(/[^a-zA-Z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .toLowerCase();
+  if (!snake) return "service";
+  return /^[0-9]/.test(snake) ? `service_${snake}` : snake;
+}
+
+function resolveServiceName(
+  tags: readonly string[] | undefined,
+  pathTemplate: string,
+): string {
+  const primaryTag = tags?.find((tag) => tag.trim().length > 0);
+  if (primaryTag) return toSnakeCase(primaryTag);
+  const segment = pathTemplate
+    .split("/")
+    .filter(Boolean)
+    .find(
+      (part) =>
+        !part.startsWith("{") &&
+        !/^(?:api|rest|v\d+(?:\.\d+)?)$/i.test(part),
+    );
+  return toSnakeCase(segment ?? "service");
+}
+
 function operationIdToFunctionName(operationId: string): string {
   return toCamelCase(operationId);
 }
 
 function renderHttpMethod(method: OpenAPIHttpMethod): string {
-  const rendered = `"${method.toUpperCase()}"`;
-  // The pinned Alchemy traits release predates OPTIONS/TRACE even though the
-  // Effect HTTP client handles both. Preserve the real runtime value while
-  // keeping generated sources type-checkable until that upstream union widens.
-  return method === "options" || method === "trace"
-    ? `${rendered} as unknown as T.HttpMethod`
-    : rendered;
+  return `"${method.toUpperCase()}"`;
 }
 
 function resolveOperationId(
@@ -364,7 +441,7 @@ function renderEnumLiterals(
         : `"${escapeStringLiteral(String(v))}"`,
     )
     .join(", ");
-  return `Schema.Literals([${literals}])`;
+  return `S.Literals([${literals}])`;
 }
 
 function renderParameterSchema3(
@@ -372,7 +449,7 @@ function renderParameterSchema3(
   spec: OpenAPI3Spec,
   ctx: SchemaGenerationContext,
 ): string {
-  if (!schema) return "Schema.String";
+  if (!schema) return "S.String";
   if (schema.enum && schema.enum.length > 0) {
     return renderEnumLiterals(schema.enum, schema.type);
   }
@@ -512,7 +589,7 @@ function isScalarUnion(branches: SchemaObject[], spec: OpenAPISpec): boolean {
  * A `oneOf`/`anyOf` branch that contributes only nullability — an explicit
  * `{ "type": "null" }` branch or a `$ref` to a null-only enum (PostHog's
  * `NullEnum` is `{ "enum": [null] }`). Such branches collapse into a
- * `Schema.NullOr` / `| null` wrapper rather than becoming a union member.
+ * `S.NullOr` / `| null` wrapper rather than becoming a union member.
  */
 function isNullBranch(branch: SchemaObject, spec: any): boolean {
   let b = branch;
@@ -532,7 +609,7 @@ function isNullBranch(branch: SchemaObject, spec: any): boolean {
 }
 
 // ============================================================================
-// Sensitive Field Detection
+// Redacted Field Detection
 // ============================================================================
 
 /**
@@ -573,11 +650,6 @@ function isSensitiveFieldName(name: string): boolean {
 // ============================================================================
 
 interface SchemaGenerationContext {
-  // Whether to emit input-friendly Sensitive* (decoded type is the union
-  // `A | Redacted<A>`) or output-strict SensitiveOutput* (decoded type is just
-  // `Redacted<A>`). Output schemas should use the strict variant so consumers
-  // never have to coerce. Defaults to "input" for backwards-compat callers
-  // that don't pass a direction.
   direction?: "input" | "output";
   usesSensitiveString: boolean;
   usesSensitiveNullableString: boolean;
@@ -595,7 +667,7 @@ function openApiTypeToEffectSchema(
   // Handle $ref
   if (prop.$ref) {
     if (seenRefs.has(prop.$ref)) {
-      return "Schema.Unknown"; // Prevent infinite recursion
+      return "S.Unknown"; // Prevent infinite recursion
     }
     const resolved = resolveRef(spec, prop.$ref);
     return openApiTypeToEffectSchema(
@@ -614,7 +686,7 @@ function openApiTypeToEffectSchema(
     if (prop.allOf.length === 1) {
       let resolved = prop.allOf[0];
       if (resolved.$ref) {
-        if (seenRefs.has(resolved.$ref)) return "Schema.Unknown";
+        if (seenRefs.has(resolved.$ref)) return "S.Unknown";
         resolved = resolveRef(spec, resolved.$ref);
         // Recurse with the resolved schema. Carry over `description` and
         // nullability from the parent if set.
@@ -667,7 +739,7 @@ function openApiTypeToEffectSchema(
 
   // Handle oneOf/anyOf — emit a union of the branch schemas. Branches that
   // only express nullability (`{type:"null"}`, PostHog's `NullEnum`) collapse
-  // into a `Schema.NullOr` wrapper instead of becoming a `Schema.Null` member.
+  // into a `S.NullOr` wrapper instead of becoming a `S.Null` member.
   if (prop.oneOf || prop.anyOf) {
     // Bail out of deeply-nested unions. Inlining recursive union graphs (e.g.
     // PostHog's HogQL `query` AST) expands combinatorially into multi-hundred-MB
@@ -677,7 +749,7 @@ function openApiTypeToEffectSchema(
       seenRefs.size > MAX_UNION_INLINE_DEPTH &&
       !isScalarUnion(unionBranches, spec)
     ) {
-      return "Schema.Unknown";
+      return "S.Unknown";
     }
     const branches = unionBranches;
     let nullable = isNullable(prop);
@@ -692,17 +764,17 @@ function openApiTypeToEffectSchema(
       );
     }
     const uniq = [...new Set(members)];
-    if (uniq.length === 0) return "Schema.Null";
+    if (uniq.length === 0) return "S.Null";
     const base =
-      uniq.length === 1 ? uniq[0] : `Schema.Union([${uniq.join(", ")}])`;
-    const result = nullable ? `Schema.NullOr(${base})` : base;
-    return result.length > MAX_UNION_INLINE_CHARS ? "Schema.Unknown" : result;
+      uniq.length === 1 ? uniq[0] : `S.Union([${uniq.join(", ")}])`;
+    const result = nullable ? `S.NullOr(${base})` : base;
+    return result.length > MAX_UNION_INLINE_CHARS ? "S.Unknown" : result;
   }
 
   // Handle enum
   if (prop.enum && prop.enum.length > 0) {
     const baseSchema = renderEnumLiterals(prop.enum, prop.type);
-    return isNullable(prop) ? `Schema.NullOr(${baseSchema})` : baseSchema;
+    return isNullable(prop) ? `S.NullOr(${baseSchema})` : baseSchema;
   }
 
   // Handle type
@@ -711,40 +783,23 @@ function openApiTypeToEffectSchema(
 
   switch (baseType) {
     case "string":
-      // Check for sensitive annotation
       if (prop["x-sensitive"]) {
-        // For response schemas use the strict SensitiveOutput* variants so
-        // the decoded type is `Redacted<string>` (no `string | Redacted<...>`
-        // union). For request bodies keep the input-friendly Sensitive*
-        // variants so callers can pass either form.
-        const useStrict = ctx?.direction === "output";
         const nullable = isNullable(prop);
         if (ctx) {
-          if (useStrict) {
-            if (nullable) ctx.usesSensitiveOutputNullableString = true;
-            else ctx.usesSensitiveOutputString = true;
-          } else {
-            if (nullable) ctx.usesSensitiveNullableString = true;
-            else ctx.usesSensitiveString = true;
-          }
+          if (nullable) ctx.usesSensitiveNullableString = true;
+          else ctx.usesSensitiveString = true;
         }
-        if (useStrict) {
-          baseSchema = nullable
-            ? "SensitiveOutputNullableString"
-            : "SensitiveOutputString";
-        } else {
-          baseSchema = nullable ? "SensitiveNullableString" : "SensitiveString";
-        }
-        return baseSchema; // Return early since Sensitive handles null
+        const redacted = "S.Redacted(S.String)";
+        return nullable ? `S.NullOr(${redacted})` : redacted;
       }
-      baseSchema = "Schema.String";
+      baseSchema = "S.String";
       break;
     case "integer":
     case "number":
-      baseSchema = "Schema.Number";
+      baseSchema = "S.Number";
       break;
     case "boolean":
-      baseSchema = "Schema.Boolean";
+      baseSchema = "S.Boolean";
       break;
     case "array":
       if (prop.items) {
@@ -755,9 +810,9 @@ function openApiTypeToEffectSchema(
           seenRefs,
           ctx,
         );
-        baseSchema = `Schema.Array(${itemSchema})`;
+        baseSchema = `S.Array(${itemSchema})`;
       } else {
-        baseSchema = "Schema.Array(Schema.Unknown)";
+        baseSchema = "S.Array(S.Unknown)";
       }
       break;
     case "object":
@@ -765,7 +820,7 @@ function openApiTypeToEffectSchema(
         baseSchema = generateStructSchema(prop, spec, indent, seenRefs, ctx);
       } else if (prop.additionalProperties) {
         if (typeof prop.additionalProperties === "boolean") {
-          baseSchema = "Schema.Record(Schema.String, Schema.Unknown)";
+          baseSchema = "S.Record(S.String, S.Unknown)";
         } else {
           const valueSchema = openApiTypeToEffectSchema(
             prop.additionalProperties,
@@ -774,22 +829,22 @@ function openApiTypeToEffectSchema(
             seenRefs,
             ctx,
           );
-          baseSchema = `Schema.Record(Schema.String, ${valueSchema})`;
+          baseSchema = `S.Record(S.String, ${valueSchema})`;
         }
       } else {
-        baseSchema = "Schema.Unknown";
+        baseSchema = "S.Unknown";
       }
       break;
     default:
       if (prop.properties) {
         baseSchema = generateStructSchema(prop, spec, indent, seenRefs, ctx);
       } else {
-        baseSchema = "Schema.Unknown";
+        baseSchema = "S.Unknown";
       }
       break;
   }
 
-  return isNullable(prop) ? `Schema.NullOr(${baseSchema})` : baseSchema;
+  return isNullable(prop) ? `S.NullOr(${baseSchema})` : baseSchema;
 }
 
 function generateStructSchema(
@@ -799,7 +854,7 @@ function generateStructSchema(
   seenRefs: Set<string> = new Set(),
   ctx?: SchemaGenerationContext,
 ): string {
-  if (!schema.properties) return "Schema.Unknown";
+  if (!schema.properties) return "S.Unknown";
 
   const required = new Set(schema.required || []);
   const lines: string[] = [];
@@ -826,13 +881,13 @@ function generateStructSchema(
     const isOptional = !required.has(key);
     const safeKey = quotePropKey(key);
     if (isOptional) {
-      lines.push(`${indent}  ${safeKey}: Schema.optional(${fieldSchema}),`);
+      lines.push(`${indent}  ${safeKey}: S.optional(${fieldSchema}),`);
     } else {
       lines.push(`${indent}  ${safeKey}: ${fieldSchema},`);
     }
   }
 
-  return `Schema.Struct({\n${lines.join("\n")}\n${indent}})`;
+  return `S.Struct({\n${lines.join("\n")}\n${indent}})`;
 }
 
 // ============================================================================
@@ -841,27 +896,12 @@ function generateStructSchema(
 // Mirrors `openApiTypeToEffectSchema` but emits a TS *type* string instead of a
 // runtime schema. Used to emit an explicit `interface`/`type` for every
 // Input/Output schema so the generated const can be cast
-// `... as unknown as Schema.Codec<Name>` instead of relying on the expensive
+// `... as unknown as S.Codec<Name>` instead of relying on the expensive
 // `export type X = typeof X.Type` inference (which serializes the full
-// `Schema.Struct<{...}>` into every `.d.ts` and forces consumers to
+// `S.Struct<{...}>` into every `.d.ts` and forces consumers to
 // re-instantiate `.Type`). Keeps the public type fully inlined and
 // self-contained.
 // ============================================================================
-
-/** Sensitive decoded `.Type` mapping, kept in sync with `core/src/sensitive.ts`. */
-function sensitiveTsType(
-  direction: "input" | "output",
-  nullable: boolean,
-): string {
-  if (direction === "output") {
-    return nullable
-      ? "Redacted.Redacted<string> | null"
-      : "Redacted.Redacted<string>";
-  }
-  return nullable
-    ? "string | Redacted.Redacted<string> | null"
-    : "string | Redacted.Redacted<string>";
-}
 
 function openApiTypeToTsType(
   prop: SchemaObject,
@@ -965,10 +1005,9 @@ function openApiTypeToTsType(
   switch (baseType) {
     case "string":
       if (prop["x-sensitive"]) {
-        return sensitiveTsType(
-          ctx?.direction === "output" ? "output" : "input",
-          isNullable(prop),
-        );
+        return isNullable(prop)
+          ? "Redacted.Redacted<string> | null"
+          : "Redacted.Redacted<string>";
       }
       ts = "string";
       break;
@@ -983,7 +1022,7 @@ function openApiTypeToTsType(
       const item = prop.items
         ? openApiTypeToTsType(prop.items, spec, seenRefs, ctx)
         : "unknown";
-      // Effect's `Schema.Array` decodes to `ReadonlyArray<T>`; mirror that in
+      // Effect's `S.Array` decodes to `ReadonlyArray<T>`; mirror that in
       // the hand-written interface so consumers can pass `readonly T[]` values.
       ts = `ReadonlyArray<${item}>`;
       break;
@@ -1044,7 +1083,7 @@ function structObjectToTsType(
 
 /**
  * Build an explicit `export interface`/`export type` declaration plus a
- * `Schema.Codec<Name>` cast appended to the schema const. The const code passed
+ * `S.Codec<Name>` cast appended to the schema const. The const code passed
  * in must NOT include the trailing `export type X = typeof X.Type` line.
  */
 function emitTypedSchema(
@@ -1052,11 +1091,20 @@ function emitTypedSchema(
   tsType: string,
   constCode: string,
 ): string {
-  // Append the explicit cast to the schema const (before its terminating `;`).
-  const castedConst = constCode.replace(
-    /;\s*$/,
-    ` as unknown as Schema.Codec<${name}>;`,
-  );
+  const assignment = `export const ${name} = `;
+  if (!constCode.startsWith(assignment)) {
+    throw new Error(`Could not suspend generated schema ${name}`);
+  }
+  const expression = constCode
+    .slice(assignment.length)
+    .replace(/^\/\*@__PURE__\*\/\s*(?:\/\*#__PURE__\*\/\s*)?/, "")
+    .replace(/;\s*$/, "");
+  const suspended = `${assignment}/*@__PURE__*/ S.suspend(() =>
+${expression
+  .split("\n")
+  .map((line) => `  ${line}`)
+  .join("\n")}
+).annotate({ identifier: "${name}" }) as unknown as S.Codec<${name}>;`;
   // Prefer an `interface` for *pure* object types (cheap, named) and a `type`
   // alias otherwise. A pure object literal both starts with `{` and ends with
   // `}` — this deliberately excludes array (`{...}[]`) and nullable
@@ -1064,7 +1112,7 @@ function emitTypedSchema(
   const decl = isSingleObjectLiteral(tsType)
     ? `export interface ${name} ${tsType}`
     : `export type ${name} = ${tsType};`;
-  return `${decl}\n${castedConst}`;
+  return `${decl}\n${suspended}`;
 }
 
 /**
@@ -1206,6 +1254,7 @@ function generateJsDoc(
 
 interface GeneratedOperation {
   fileName: string;
+  serviceName: string;
   code: string;
   functionName: string;
   exports: string[];
@@ -1218,15 +1267,11 @@ function generateInputSchemaSwagger(
   parameters: Parameter2[],
   spec: Swagger2Spec,
   ctx?: SchemaGenerationContext,
-  apiVersion?: string,
+  successCode?: number,
 ): { inputSchemaCode: string; inputSchemaName: string } {
   const inputSchemaName = `${toPascalCase(operationId)}Input`;
   const pathParams = parameters.filter((p) => p.in === "path");
-  // When the api-version is baked into the Http trait, drop it as an input
-  // field — the client injects it automatically.
-  const queryParams = parameters.filter(
-    (p) => p.in === "query" && !(apiVersion && p.name === "api-version"),
-  );
+  const queryParams = parameters.filter((p) => p.in === "query");
   const headerParams = parameters.filter((p) => p.in === "header");
   const bodyParam = parameters.find((p) => p.in === "body");
 
@@ -1257,9 +1302,11 @@ function generateInputSchemaSwagger(
     const baseSchema = param.enum
       ? renderEnumLiterals(param.enum, param.type)
       : param.type === "integer"
-        ? "Schema.Number"
-        : "Schema.String";
-    fields.push(`  ${quotePropKey(param.name)}: ${baseSchema}.pipe(T.PathParam()),`);
+        ? "S.Number"
+        : "S.String";
+    fields.push(
+      `  ${quotePropKey(param.name)}: ${baseSchema}.pipe(T.Label(${JSON.stringify(param.name)})),`,
+    );
     const tsBase = param.enum
       ? paramEnumTs(param.enum, param.type)
       : param.type === "integer"
@@ -1275,16 +1322,16 @@ function generateInputSchemaSwagger(
     let schema = param.enum
       ? renderEnumLiterals(param.enum, param.type)
       : param.type === "integer" || param.type === "number"
-        ? "Schema.Number"
+        ? "S.Number"
         : param.type === "boolean"
-          ? "Schema.Boolean"
-          : "Schema.String";
+          ? "S.Boolean"
+          : "S.String";
 
     if (!param.required) {
-      schema = `Schema.optional(${schema})`;
+      schema = `S.optional(${schema})`;
     }
     fields.push(
-      `  ${quotePropKey(param.name)}: ${schema}.pipe(T.QueryParam(${JSON.stringify(param.name)})),`,
+      `  ${quotePropKey(param.name)}: ${schema}.pipe(T.Query(${JSON.stringify(param.name)})),`,
     );
     const tsBase = param.enum
       ? paramEnumTs(param.enum, param.type)
@@ -1305,16 +1352,16 @@ function generateInputSchemaSwagger(
     let schema = param.enum
       ? renderEnumLiterals(param.enum, param.type)
       : param.type === "integer" || param.type === "number"
-        ? "Schema.Number"
+        ? "S.Number"
         : param.type === "boolean"
-          ? "Schema.Boolean"
-          : "Schema.String";
+          ? "S.Boolean"
+          : "S.String";
 
     if (!param.required) {
-      schema = `Schema.optional(${schema})`;
+      schema = `S.optional(${schema})`;
     }
     fields.push(
-      `  ${quotePropKey(param.name)}: ${schema}.pipe(T.HeaderParam(${JSON.stringify(param.name)})),`,
+      `  ${quotePropKey(param.name)}: ${schema}.pipe(T.Header(${JSON.stringify(param.name)})),`,
     );
     const tsBase = param.enum
       ? paramEnumTs(param.enum, param.type)
@@ -1361,57 +1408,40 @@ function generateInputSchemaSwagger(
         required: [...new Set(mergedRequired)],
       } as typeof bodySchema;
     }
-    if (bodySchema.properties) {
-      const required = new Set(bodySchema.required || []);
-      for (const [key, value] of Object.entries(bodySchema.properties)) {
-        if (usedNames.has(key)) continue;
-        usedNames.add(key);
-        // Auto-detect sensitive fields by name pattern
-        const bType = getBaseType(value);
-        const isSensitiveByName =
-          bType === "string" &&
-          !value["x-sensitive"] &&
-          !value.enum &&
-          isSensitiveFieldName(key);
-        const effectiveValue = isSensitiveByName
-          ? { ...value, "x-sensitive": true }
-          : value;
-
-        let fieldSchema = openApiTypeToEffectSchema(
-          effectiveValue,
-          spec,
-          "  ",
-          new Set(),
-          ctx,
-        );
-        const fieldTs = openApiTypeToTsType(
-          effectiveValue,
-          spec,
-          new Set(),
-          ctx,
-        );
-        if (!required.has(key)) {
-          fieldSchema = `Schema.optional(${fieldSchema})`;
-        }
-        fields.push(`  ${quotePropKey(key)}: ${fieldSchema},`);
-        tsFields.push(
-          `${quotePropKey(key)}${required.has(key) ? "" : "?"}: ${fieldTs}`,
-        );
-      }
-    }
+    const key = usedNames.has("body") ? "$body" : "body";
+    const bodyValueSchema = openApiTypeToEffectSchema(
+      bodySchema,
+      spec,
+      "  ",
+      new Set(),
+      ctx,
+    );
+    const bodyValueType = openApiTypeToTsType(
+      bodySchema,
+      spec,
+      new Set(),
+      ctx,
+    );
+    const annotated = `${bodyValueSchema}.pipe(T.HttpBody())`;
+    fields.push(
+      `  ${quotePropKey(key)}: ${bodyParam.required ? annotated : `S.optional(${annotated})`},`,
+    );
+    tsFields.push(
+      `${quotePropKey(key)}${bodyParam.required ? "" : "?"}: ${bodyValueType}`,
+    );
   }
 
   const swaggerHttpTraitParts = [
     `method: ${renderHttpMethod(method)}`,
-    `path: "${pathTemplate}"`,
+    `uri: "${pathTemplate}"`,
   ];
-  if (apiVersion) {
-    swaggerHttpTraitParts.push(`apiVersion: "${apiVersion}"`);
+  if (successCode !== undefined) {
+    swaggerHttpTraitParts.push(`code: ${successCode}`);
   }
   const inputSchemaCode = emitTypedSchema(
     inputSchemaName,
     `{ ${tsFields.join("; ")} }`,
-    annotatePureExportConst(`export const ${inputSchemaName} = Schema.Struct({
+    annotatePureExportConst(`export const ${inputSchemaName} = S.Struct({
 ${fields.join("\n")}
 }).pipe(T.Http({ ${swaggerHttpTraitParts.join(", ")} }));`),
   );
@@ -1461,8 +1491,7 @@ function generateInputSchema3(
   requestBodyParam: RequestBody3 | undefined,
   spec: OpenAPI3Spec,
   ctx?: SchemaGenerationContext,
-  noFollowRedirect: boolean = false,
-  apiVersion?: string,
+  successCode?: number,
 ): { inputSchemaCode: string; inputSchemaName: string } {
   // Resolve top-level $ref (e.g. #/components/requestBodies/Foo).
   const requestBody = requestBodyParam?.$ref
@@ -1470,11 +1499,7 @@ function generateInputSchema3(
     : requestBodyParam;
   const inputSchemaName = `${toPascalCase(operationId)}Input`;
   const pathParams = parameters.filter((p) => p.in === "path");
-  // When the api-version is baked into the Http trait, drop it as an input
-  // field — the client injects it automatically.
-  const queryParams = parameters.filter(
-    (p) => p.in === "query" && !(apiVersion && p.name === "api-version"),
-  );
+  const queryParams = parameters.filter((p) => p.in === "query");
   const headerParams = parameters.filter((p) => p.in === "header");
 
   const fields: string[] = [];
@@ -1494,9 +1519,11 @@ function generateInputSchema3(
       schema?.enum && schema.enum.length > 0
         ? renderEnumLiterals(schema.enum, schema.type)
         : schema?.type === "integer" || schema?.type === "number"
-          ? "Schema.Number"
-          : "Schema.String";
-    fields.push(`  ${quotePropKey(param.name)}: ${baseSchema}.pipe(T.PathParam()),`);
+          ? "S.Number"
+          : "S.String";
+    fields.push(
+      `  ${quotePropKey(param.name)}: ${baseSchema}.pipe(T.Label(${JSON.stringify(param.name)})),`,
+    );
     tsFields.push(`${quotePropKey(param.name)}: ${paramSchemaTs(schema)}`);
   }
 
@@ -1508,10 +1535,10 @@ function generateInputSchema3(
     let schemaStr = renderParameterSchema3(schema, spec, ctx);
 
     if (!param.required) {
-      schemaStr = `Schema.optional(${schemaStr})`;
+      schemaStr = `S.optional(${schemaStr})`;
     }
     fields.push(
-      `  ${quotePropKey(param.name)}: ${schemaStr}.pipe(T.QueryParam(${JSON.stringify(param.name)})),`,
+      `  ${quotePropKey(param.name)}: ${schemaStr}.pipe(T.Query(${JSON.stringify(param.name)})),`,
     );
     tsFields.push(
       `${quotePropKey(param.name)}${param.required ? "" : "?"}: ${paramSchemaTs(schema)}`,
@@ -1526,10 +1553,10 @@ function generateInputSchema3(
     let schemaStr = renderParameterSchema3(schema, spec, ctx);
 
     if (!param.required) {
-      schemaStr = `Schema.optional(${schemaStr})`;
+      schemaStr = `S.optional(${schemaStr})`;
     }
     fields.push(
-      `  ${quotePropKey(param.name)}: ${schemaStr}.pipe(T.HeaderParam(${JSON.stringify(param.name)})),`,
+      `  ${quotePropKey(param.name)}: ${schemaStr}.pipe(T.Header(${JSON.stringify(param.name)})),`,
     );
     tsFields.push(
       `${quotePropKey(param.name)}${param.required ? "" : "?"}: ${paramSchemaTs(schema)}`,
@@ -1582,73 +1609,46 @@ function generateInputSchema3(
         };
       }
 
-      if (bodySchema.properties) {
-        const required = new Set(bodySchema.required || []);
-        for (const [key, value] of Object.entries(bodySchema.properties)) {
-          if (usedNames.has(key)) continue;
-          usedNames.add(key);
-          // Auto-detect sensitive fields by name pattern
-          const bType = getBaseType(value);
-          const isSensitiveByName =
-            bType === "string" &&
-            !value["x-sensitive"] &&
-            !value.enum &&
-            isSensitiveFieldName(key);
-          const effectiveValue = isSensitiveByName
-            ? { ...value, "x-sensitive": true }
-            : value;
-
-          let fieldSchema = openApiTypeToEffectSchema(
-            effectiveValue,
-            spec,
-            "  ",
-            new Set(),
-            ctx,
-          );
-          const fieldTs = openApiTypeToTsType(
-            effectiveValue,
-            spec,
-            new Set(),
-            ctx,
-          );
-          if (!required.has(key)) {
-            fieldSchema = `Schema.optional(${fieldSchema})`;
-          }
-          fields.push(`  ${quotePropKey(key)}: ${fieldSchema},`);
-          tsFields.push(
-            `${quotePropKey(key)}${required.has(key) ? "" : "?"}: ${fieldTs}`,
-          );
-        }
-      }
+      const key = usedNames.has("body") ? "$body" : "body";
+      const bodyValueSchema = openApiTypeToEffectSchema(
+        bodySchema,
+        spec,
+        "  ",
+        new Set(),
+        ctx,
+      );
+      const bodyValueType = openApiTypeToTsType(
+        bodySchema,
+        spec,
+        new Set(),
+        ctx,
+      );
+      const annotated = `${bodyValueSchema}.pipe(T.HttpBody())`;
+      fields.push(
+        `  ${quotePropKey(key)}: ${requestBody.required ? annotated : `S.optional(${annotated})`},`,
+      );
+      tsFields.push(
+        `${quotePropKey(key)}${requestBody.required ? "" : "?"}: ${bodyValueType}`,
+      );
     }
   }
 
   const httpTraitParts = [
     `method: ${renderHttpMethod(method)}`,
-    `path: "${pathTemplate}"`,
+    `uri: "${pathTemplate}"`,
   ];
+  if (successCode !== undefined) {
+    httpTraitParts.push(`code: ${successCode}`);
+  }
   if (bodyContentType) {
     httpTraitParts.push(`contentType: "${bodyContentType}"`);
   }
-  if (apiVersion) {
-    httpTraitParts.push(`apiVersion: "${apiVersion}"`);
-  }
-
-  // If the operation is marked as not following redirects (via the
-  // detected 3xx-with-Location response or an `x-distilled-no-follow-redirect`
-  // vendor extension), append the trait so the runtime client knows to
-  // surface the 3xx and read the Location header.
-  const traitChain = [`T.Http({ ${httpTraitParts.join(", ")} })`];
-  if (noFollowRedirect) {
-    traitChain.push(`T.NoFollowRedirect()`);
-  }
-
   const inputSchemaCode = emitTypedSchema(
     inputSchemaName,
     `{ ${tsFields.join("; ")} }`,
-    annotatePureExportConst(`export const ${inputSchemaName} = Schema.Struct({
+    annotatePureExportConst(`export const ${inputSchemaName} = S.Struct({
 ${fields.join("\n")}
-}).pipe(${traitChain.join(", ")});`),
+}).pipe(T.Http({ ${httpTraitParts.join(", ")} }));`),
   );
 
   return { inputSchemaCode, inputSchemaName };
@@ -1663,8 +1663,12 @@ function getResponseSchema(
   version: SpecVersion,
   responses: Record<string, any>,
 ): SchemaObject | null {
-  const successResponse =
-    responses["200"] || responses["201"] || responses["204"];
+  const successStatus = Object.keys(responses)
+    .filter((status) => /^2\d\d$/.test(status))
+    .sort((a, b) => Number(a) - Number(b))[0];
+  const successResponse = successStatus
+    ? responses[successStatus]
+    : undefined;
   if (!successResponse) return null;
 
   if (version === "2.0") {
@@ -1689,6 +1693,13 @@ function getResponseSchema(
     }
     return jsonContent.schema;
   }
+}
+
+function getSuccessCode(responses: Record<string, unknown>): number | undefined {
+  const status = Object.keys(responses)
+    .filter((candidate) => /^2\d\d$/.test(candidate))
+    .sort((a, b) => Number(a) - Number(b))[0];
+  return status === undefined ? undefined : Number(status);
 }
 
 function generateOutputSchema(
@@ -1719,7 +1730,7 @@ function generateOutputSchema(
       outputSchemaCode: emitTypedSchema(
         outputSchemaName,
         "void",
-        `export const ${outputSchemaName} = /*@__PURE__*/ /*#__PURE__*/ Schema.Void;`,
+        `export const ${outputSchemaName} = /*@__PURE__*/ /*#__PURE__*/ S.Void;`,
       ),
       outputSchemaName,
       sensitiveImports: {
@@ -1755,7 +1766,7 @@ function generateOutputSchema(
       outputSchemaCode: emitTypedSchema(
         outputSchemaName,
         `ReadonlyArray<${itemTs}>`,
-        `export const ${outputSchemaName} = /*@__PURE__*/ /*#__PURE__*/ Schema.Array(${itemSchema});`,
+        `export const ${outputSchemaName} = /*@__PURE__*/ /*#__PURE__*/ S.Array(${itemSchema});`,
       ),
       outputSchemaName,
       sensitiveImports: {
@@ -1790,90 +1801,6 @@ function generateOutputSchema(
       usesSensitiveOutputNullableString: ctx.usesSensitiveOutputNullableString,
     },
   };
-}
-
-// ============================================================================
-// Unified Operation Generation
-// ============================================================================
-
-function generateOperationCode(
-  functionName: string,
-  inputSchemaName: string,
-  outputSchemaName: string,
-  jsDoc: string,
-  operationErrors: string[],
-  sensitiveImports: {
-    usesSensitiveString: boolean;
-    usesSensitiveNullableString: boolean;
-    usesSensitiveOutputString: boolean;
-    usesSensitiveOutputNullableString: boolean;
-  },
-  config: GeneratorConfig,
-): string {
-  const clientImport = config.clientImport ?? `${config.importPrefix}/client`;
-  const traitsImport = config.traitsImport ?? `${config.importPrefix}/traits`;
-  const sensitiveImportPath =
-    config.sensitiveImport ?? `${config.importPrefix}/sensitive`;
-  const errorsImportPath =
-    config.errorsImport ?? `${config.importPrefix}/errors`;
-
-  const hasErrors = operationErrors.length > 0;
-  const errorsLine = hasErrors
-    ? `\n  errors: [${operationErrors.join(", ")}] as const,`
-    : "";
-
-  const operationCode = jsDoc
-    ? `${jsDoc}
-export const ${functionName} = /*@__PURE__*/ /*#__PURE__*/ API.make(() => ({
-  inputSchema: ${inputSchemaName},
-  outputSchema: ${outputSchemaName},${errorsLine}
-}));`
-    : `export const ${functionName} = /*@__PURE__*/ /*#__PURE__*/ API.make(() => ({
-  inputSchema: ${inputSchemaName},
-  outputSchema: ${outputSchemaName},${errorsLine}
-}));`;
-
-  let imports = `import * as Schema from "effect/Schema";
-import { API } from "${clientImport}.ts";
-import * as T from "${traitsImport}.ts";`;
-
-  if (hasErrors) {
-    imports += `\nimport { ${operationErrors.join(", ")} } from "${errorsImportPath}.ts";`;
-  }
-
-  const sensitiveTypesToImport: string[] = [];
-  if (sensitiveImports.usesSensitiveString) {
-    sensitiveTypesToImport.push("SensitiveString");
-  }
-  if (sensitiveImports.usesSensitiveNullableString) {
-    sensitiveTypesToImport.push("SensitiveNullableString");
-  }
-  if (sensitiveImports.usesSensitiveOutputString) {
-    sensitiveTypesToImport.push("SensitiveOutputString");
-  }
-  if (sensitiveImports.usesSensitiveOutputNullableString) {
-    sensitiveTypesToImport.push("SensitiveOutputNullableString");
-  }
-  if (sensitiveTypesToImport.length > 0) {
-    imports += `\nimport { ${sensitiveTypesToImport.join(", ")} } from "${sensitiveImportPath}.ts";`;
-    // The explicit Input/Output type aliases reference `Redacted.Redacted<...>`
-    // for sensitive fields (see openApiTypeToTsType / sensitiveTsType).
-    imports += `\nimport * as Redacted from "effect/Redacted";`;
-  }
-
-  return [
-    imports,
-    "",
-    "// Input Schema",
-    "", // will be filled by caller
-    "",
-    "// Output Schema",
-    "", // will be filled by caller
-    "",
-    "// The operation",
-    operationCode,
-    "",
-  ].join("\n");
 }
 
 // ============================================================================
@@ -1970,12 +1897,56 @@ function writeGeneratedOutput(
   let backupDir: string | undefined;
 
   try {
-    for (const op of operations) {
-      fs.writeFileSync(path.join(stagingDir, op.fileName), op.code);
+    const services = new Map<string, GeneratedOperation[]>();
+    for (const operation of operations) {
+      const grouped = services.get(operation.serviceName) ?? [];
+      grouped.push(operation);
+      services.set(operation.serviceName, grouped);
     }
 
-    const barrelContent = `${GENERATED_FILE_HEADER}\n${operations
-      .map((op) => `export * from "./${op.functionName}.ts";`)
+    const serviceNames = [...services.keys()].sort();
+    for (const serviceName of serviceNames) {
+      const grouped = services.get(serviceName)!;
+      const namespaceImports = new Set<string>();
+      const namedImports = new Map<string, Set<string>>();
+      const bodies: string[] = [];
+      for (const operation of grouped) {
+        const body: string[] = [];
+        for (const line of operation.code.split("\n")) {
+          const named = /^import \{ (.+) \} from "(.+)";$/.exec(line);
+          if (named) {
+            const bindings = namedImports.get(named[2]!) ?? new Set<string>();
+            for (const binding of named[1]!.split(", ")) bindings.add(binding);
+            namedImports.set(named[2]!, bindings);
+          } else if (line.startsWith("import ")) {
+            namespaceImports.add(line);
+          } else {
+            body.push(line);
+          }
+        }
+        bodies.push(body.join("\n").trim());
+      }
+      const imports = [
+        ...namespaceImports,
+        ...[...namedImports.entries()].map(
+          ([source, bindings]) =>
+            `import { ${[...bindings].join(", ")} } from "${source}";`,
+        ),
+      ];
+      const module = [
+        GENERATED_FILE_HEADER,
+        ...imports,
+        "",
+        ...bodies.flatMap((body, index) =>
+          index === bodies.length - 1 ? [body] : [body, ""],
+        ),
+        "",
+      ].join("\n");
+      fs.writeFileSync(path.join(stagingDir, `${serviceName}.ts`), module);
+    }
+
+    const barrelContent = `${GENERATED_FILE_HEADER}\n${serviceNames
+      .map((name) => `export * as ${name} from "./${name}.ts";`)
       .join("\n")}\n`;
     fs.writeFileSync(path.join(stagingDir, "index.ts"), barrelContent);
     fs.writeFileSync(
@@ -2074,6 +2045,13 @@ export function generateFromOpenAPI(
   let failed = 0;
   const skipDeprecated = config.skipDeprecated !== false;
   const unsupported = countUnsupportedOperations(spec.paths ?? {});
+  if (unsupported > 0) {
+    failures.push(
+      new Error(
+        `OpenAPI document contains ${unsupported} operation${unsupported === 1 ? "" : "s"} with unsupported HTTP methods`,
+      ),
+    );
+  }
 
   if (version === "2.0") {
     // Swagger 2.0 codepath
@@ -2143,7 +2121,7 @@ export function generateFromOpenAPI(
               parameters,
               swagger,
               sensitiveCtx,
-              config.apiVersion,
+              getSuccessCode(operation.responses),
             );
 
           const responseSchema = getResponseSchema(
@@ -2195,6 +2173,7 @@ export function generateFromOpenAPI(
           );
 
           const code = buildOperationFile(
+            method,
             functionName,
             inputSchemaCode,
             inputSchemaName,
@@ -2208,8 +2187,9 @@ export function generateFromOpenAPI(
           );
 
           operations.push({
-            fileName: `${functionName}.ts`,
-            code: `${GENERATED_FILE_HEADER}\n${code}`,
+            fileName: `${resolveServiceName(operation.tags, pathTemplate)}.ts`,
+            serviceName: resolveServiceName(operation.tags, pathTemplate),
+            code,
             functionName,
             exports: [inputSchemaName, outputSchemaName, functionName],
           });
@@ -2286,27 +2266,6 @@ export function generateFromOpenAPI(
             usesSensitiveOutputNullableString: false,
           };
 
-          // Detect operations that should opt out of automatic redirect-
-          // following. Two signals trigger the `T.NoFollowRedirect()` trait:
-          //   1. An explicit `x-distilled-no-follow-redirect: true` vendor
-          //      extension on the operation (lets a spec patch turn it on
-          //      without requiring this generator to recognize the shape).
-          //   2. A 3xx response that defines a Location header — the
-          //      canonical OAuth/SSO authorize pattern where the URL the
-          //      caller wants is in the Location, not the body.
-          const opAny = operation as unknown as Record<string, unknown>;
-          const has3xxLocation = Object.entries(operation.responses ?? {}).some(
-            ([status, resp]) => {
-              if (!status.startsWith("3")) return false;
-              const respHeaders = (
-                resp as { headers?: Record<string, unknown> }
-              ).headers;
-              return respHeaders !== undefined && "Location" in respHeaders;
-            },
-          );
-          const noFollowRedirect =
-            opAny["x-distilled-no-follow-redirect"] === true || has3xxLocation;
-
           const { inputSchemaCode, inputSchemaName } = generateInputSchema3(
             operationId,
             method,
@@ -2315,8 +2274,7 @@ export function generateFromOpenAPI(
             operation.requestBody,
             oas,
             sensitiveCtx,
-            noFollowRedirect,
-            config.apiVersion,
+            getSuccessCode(operation.responses),
           );
 
           const responseSchema = getResponseSchema(
@@ -2364,6 +2322,7 @@ export function generateFromOpenAPI(
           );
 
           const code = buildOperationFile(
+            method,
             functionName,
             inputSchemaCode,
             inputSchemaName,
@@ -2377,8 +2336,9 @@ export function generateFromOpenAPI(
           );
 
           operations.push({
-            fileName: `${functionName}.ts`,
-            code: `${GENERATED_FILE_HEADER}\n${code}`,
+            fileName: `${resolveServiceName(operation.tags, pathTemplate)}.ts`,
+            serviceName: resolveServiceName(operation.tags, pathTemplate),
+            code,
             functionName,
             exports: [inputSchemaName, outputSchemaName, functionName],
           });
@@ -2559,7 +2519,13 @@ function detectPagination(
   return { mode, inputToken, outputToken, items };
 }
 
+const importPath = (specifier: string): string =>
+  specifier.startsWith(".") && !specifier.endsWith(".ts")
+    ? `${specifier}.ts`
+    : specifier;
+
 function buildOperationFile(
+  method: OpenAPIHttpMethod,
   functionName: string,
   inputSchemaCode: string,
   inputSchemaName: string,
@@ -2581,61 +2547,73 @@ function buildOperationFile(
     | undefined,
   config: GeneratorConfig,
 ): string {
-  const clientImport = config.clientImport ?? `${config.importPrefix}/client`;
+  const apiImport = config.apiImport ?? "@kevinmichaelchen/distilled/api";
+  const schemaImport =
+    config.schemaImport ?? "@kevinmichaelchen/distilled/schema";
   const traitsImport = config.traitsImport ?? `${config.importPrefix}/traits`;
-  const sensitiveImportPath =
-    config.sensitiveImport ?? `${config.importPrefix}/sensitive`;
+  const protocolImport =
+    config.protocolImport ?? `${config.importPrefix}/protocol`;
+  const retryImport = config.retryImport ?? `${config.importPrefix}/retry`;
   const errorsImportPath =
     config.errorsImport ?? `${config.importPrefix}/errors`;
 
-  const hasErrors = operationErrors.length > 0;
-  const errorsLine = hasErrors
-    ? `\n  errors: [${operationErrors.join(", ")}] as const,`
-    : "";
+  const uniqueErrors = [...new Set(operationErrors)];
+  const errorTypeName = `${toPascalCase(functionName)}Error`;
+  const errorUnion = [...uniqueErrors, config.operationErrorType].join(" | ");
+  const retryMethods = new Set(
+    config.retryMethods ?? ["GET", "HEAD", "OPTIONS", "TRACE"],
+  );
+  const retries = retryMethods.has(
+    method.toUpperCase() as UppercaseHttpMethod,
+  );
 
   const factory = pagination ? "makePaginated" : "make";
+  const operationType = pagination
+    ? "PaginatedOperationMethod"
+    : "OperationMethod";
+  const selectedProtocol =
+    pagination && config.paginatedProtocolName
+      ? config.paginatedProtocolName
+      : config.protocolName;
   const paginationLine = pagination
     ? `\n  pagination: { mode: "${pagination.mode}", inputToken: "${pagination.inputToken}", outputToken: "${pagination.outputToken}", items: "${pagination.items}" },`
     : "";
+  const retryLine = retries
+    ? `\n  retry: ${config.retryTag ?? "Retry.Retry"},`
+    : "";
 
-  const operationCode = jsDoc
-    ? `${jsDoc}
-export const ${functionName} = /*@__PURE__*/ /*#__PURE__*/ API.${factory}(() => ({
-  inputSchema: ${inputSchemaName},
-  outputSchema: ${outputSchemaName},${errorsLine}${paginationLine}
-}));`
-    : `export const ${functionName} = /*@__PURE__*/ /*#__PURE__*/ API.${factory}(() => ({
-  inputSchema: ${inputSchemaName},
-  outputSchema: ${outputSchemaName},${errorsLine}${paginationLine}
+  const operationCode = `${jsDoc ? `${jsDoc}\n` : ""}export type ${errorTypeName} = ${errorUnion};
+export const ${functionName}: API.${operationType}<
+  ${inputSchemaName},
+  ${outputSchemaName},
+  ${errorTypeName},
+  ${config.operationContextType}
+> = /*@__PURE__*/ API.${factory}(() => ({
+  input: ${inputSchemaName},
+  output: ${outputSchemaName},
+  errors: [${uniqueErrors.join(", ")}] as const,
+  protocol: ${selectedProtocol},${retryLine}${paginationLine}
 }));`;
 
-  let imports = `import * as Schema from "effect/Schema";
-import { API } from "${clientImport}.ts";
-import * as T from "${traitsImport}.ts";`;
+  const protocolNames = [config.protocolName];
+  if (
+    config.paginatedProtocolName &&
+    config.paginatedProtocolName !== config.protocolName
+  ) {
+    protocolNames.push(config.paginatedProtocolName);
+  }
+  let imports = `import * as S from "${importPath(schemaImport)}";
+import * as API from "${importPath(apiImport)}";
+import * as T from "${importPath(traitsImport)}";
+import { ${protocolNames.join(", ")}, type ${config.operationErrorType}, type ${config.operationContextType} } from "${importPath(protocolImport)}";
+import * as Retry from "${importPath(retryImport)}";`;
 
-  if (hasErrors) {
-    imports += `\nimport { ${operationErrors.join(", ")} } from "${errorsImportPath}.ts";`;
+  if (uniqueErrors.length > 0) {
+    imports += `\nimport { ${uniqueErrors.join(", ")} } from "${importPath(errorsImportPath)}";`;
   }
 
-  const sensitiveTypesToImport: string[] = [];
-  if (sensitiveImports.usesSensitiveString) {
-    sensitiveTypesToImport.push("SensitiveString");
-  }
-  if (sensitiveImports.usesSensitiveNullableString) {
-    sensitiveTypesToImport.push("SensitiveNullableString");
-  }
-  if (sensitiveImports.usesSensitiveOutputString) {
-    sensitiveTypesToImport.push("SensitiveOutputString");
-  }
-  if (sensitiveImports.usesSensitiveOutputNullableString) {
-    sensitiveTypesToImport.push("SensitiveOutputNullableString");
-  }
-  if (sensitiveTypesToImport.length > 0) {
-    imports += `\nimport { ${sensitiveTypesToImport.join(", ")} } from "${sensitiveImportPath}.ts";`;
-    // The explicit Input/Output type aliases reference `Redacted.Redacted<...>`
-    // for sensitive fields (see openApiTypeToTsType / sensitiveTsType).
-    imports += `\nimport * as Redacted from "effect/Redacted";`;
-  }
+  const usesRedacted = Object.values(sensitiveImports).some(Boolean);
+  if (usesRedacted) imports += `\nimport * as Redacted from "effect/Redacted";`;
 
   return [
     imports,

@@ -129,32 +129,51 @@ release.
 
 <Expandable title="Show the type-level change">
 
-The generated contract now names the complete input, output, error, and Effect
-requirements. This simplified Jira example shows the difference:
+The generated declaration now names the complete input, output, error, and
+Effect requirements. This is the actual GitHub declaration shape, with only
+imports and line wrapping elided:
+
+<Diff
+  lang="ts"
+  old={`export declare const reposGet: OperationMethod<
+  ReposGetInput,
+  ReposGetOutput,
+  Forbidden | NotFound,
+  Credentials,
+  never
+>;`}
+  new={`export type ReposGetError =
+  | Forbidden
+  | NotFound
+  | GitHubOpError;
+
+export declare const reposGet: API.OperationMethod<
+  ReposGetInput,
+  ReposGetOutput,
+  ReposGetError,
+  GitHubOpContext
+>;`}
+/>
+
+`ReposGetError`, `GitHubOpError`, and `GitHubOpContext` are real provider
+exports rather than explanatory aliases:
 
 ```ts
-type GetIssueBefore = OperationMethod<
-  GetIssueInput,
-  GetIssueOutput,
-  NotFound,
-  Credentials
->;
+export type GitHubOpError =
+  | DefaultErrors
+  | ConfigError
+  | HttpClientError.HttpClientError;
 
-type GetIssueAfter = OperationMethod<
-  GetIssueInput,
-  GetIssueOutput,
-  GetIssueError,
-  JiraOpContext
->;
-
-type GetIssueError = NotFound | JiraOpError;
-type JiraOpContext = Credentials | HttpClient.HttpClient;
+export type GitHubOpContext = Credentials | HttpClient.HttpClient;
 ```
 
-The newer error union includes the declared endpoint failure plus provider,
+The newer error union includes the declared endpoint failures plus provider,
 configuration, parsing, and transport failures. The context tells Effect that
 the operation needs credentials and an HTTP client. Missing environment
-credentials now produce a typed `ConfigError` instead of an Effect defect.
+credentials now produce a typed `ConfigError` instead of an Effect defect. See
+the generated [`0.1.x` operation](https://github.com/kevinmichaelchen/distilled-github/blob/eafa531af5710892e38ce31d457cfc1d24ffe785/src/operations/reposGet.ts),
+the [`0.2.x` operation](https://github.com/kevinmichaelchen/distilled-github/blob/ceb717aeb89e2c32c16d089e007bfdfa8c4a7ab8/src/services/repos.ts#L2216-L2228),
+and its [provider contract](https://github.com/kevinmichaelchen/distilled-github/blob/ceb717aeb89e2c32c16d089e007bfdfa8c4a7ab8/src/protocol.ts#L31-L36).
 These operation signatures are more truthful, although the
 [Protocol failure boundary](#what-still-deserves-work) still has room to become
 fully compiler-derived.

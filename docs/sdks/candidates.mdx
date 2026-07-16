@@ -1,0 +1,142 @@
+---
+title: New SDK candidates
+description: An evaluation backlog for providers that could join the Distilled SDK factory.
+sidebar:
+  label: New SDK candidates
+  icon: list-plus
+  order: 3
+---
+
+This catalogue records promising providers before they become implementation commitments. A candidate advances only when its authoritative source, product boundary, generator fit, and runtime risks are understood.
+
+:::note[Conformance comes first]
+New provider work begins after the local generator and façade pass the promotion checks below. Inherited runtime behavior stays aligned with Alchemy and is tracked through the [runtime parity decision](/guides/runtime-parity), rather than silently forked. A large operation count alone is not evidence of a correct client.
+:::
+
+## How to read the backlog
+
+| Field | Meaning |
+| --- | --- |
+| Status | `Proposed`, `Researching`, `Ready`, `In progress`, `Blocked`, `Shipped`, or `Declined` |
+| Priority | `P1` is the next product target, `P2` is queued exploration, and `P3` is worth retaining but not scheduling |
+| Source shape | The authoritative input the factory would pin: OpenAPI, GraphQL schema, or typed source |
+| Effort | Relative discovery and implementation size: `S`, `M`, or `L` |
+| Exit question | The most important unknown to resolve before the candidate can become `Ready` |
+
+Priority expresses sequencing, not product importance. Re-rank entries when upstream source quality, maintainer need, or factory capability changes.
+
+## Current candidates
+
+| Candidate | Status | Priority | Source shape | Effort | Why it fits | Exit question |
+| --- | --- | --- | --- | --- | --- | --- |
+| [Confluence Cloud v2](https://developer.atlassian.com/cloud/confluence/rest/v2/intro/) | Researching | P1 | Official REST v2 OpenAPI | M | Natural companion to Jira; reuses Atlassian Cloud authentication and cursor-pagination knowledge | Does v2 cover the workflows we need, and what is the smallest correct adapter for its relative-link pagination? |
+| [CircleCI API v2](https://circleci.com/docs/api/v2/index.html?section=reference) | Proposed | P2 | Downloadable official OpenAPI | S–M | Strong CI/workflow complement and a compact test of query, header, and continuation-token conformance | Is the downloadable contract complete enough for the high-value pipeline, workflow, and insights APIs? |
+| [GitLab REST API](https://docs.gitlab.com/api/openapi/) | Proposed | P2 | OpenAPI 3 generated from GitLab source | M | Broad source-control and CI coverage, including self-managed installations | Which GitLab version and product-tier boundary can Distilled support without implying false cross-version compatibility? |
+| [New Relic NerdGraph](https://docs.newrelic.com/docs/apis/nerdgraph/get-started/nerdgraph-explorer/) | Proposed | P2 | GraphQL schema and introspection | L | Directly supports Rainger observability work and gives the factory a principled GraphQL path | Should Distilled generate named operations, expose a typed GraphQL document layer, or combine the two? |
+| [Grafana HTTP APIs](https://grafana.com/docs/grafana-cloud/developer-resources/api-reference/http-api/) | Proposed | P3 | Canonical Swagger v2 plus converted OpenAPI 3 | M | Aligns with dashboards, alerting, service accounts, and telemetry automation | Where is the stable boundary among Grafana OSS, Grafana Cloud, legacy `/api`, and newer `/apis` resources? |
+| [Doppler API](https://docs.doppler.com/reference/api) | Proposed | P3 | REST reference; machine-readable contract to validate | M | Complements configuration and secret-delivery workflows | Is there a complete, versioned specification that can be pinned without reconstructing an API from prose? |
+
+## Recommended sequence
+
+<Steps>
+  <Step title="Confluence Cloud v2">
+    Start with the closest product adjacency. Reuse the Jira provider's Atlassian Cloud lessons, while treating Confluence scopes, pagination, and error envelopes as an independent contract.
+  </Step>
+  <Step title="CircleCI API v2">
+    Use a smaller official contract to prove that the hardened generator preserves query parameters, headers, pagination tokens, typed failures, and safe retry behavior end to end.
+  </Step>
+  <Step title="GitLab REST API">
+    Exercise the same OpenAPI pipeline against a larger, version-sensitive API with multiple authentication modes and self-managed base URLs.
+  </Step>
+  <Step title="New Relic NerdGraph">
+    Run an architecture spike before implementation. Record the GraphQL source, generated-artifact, error, pagination, and mutation-retry decisions in an ADR.
+  </Step>
+  <Step title="Grafana, then Doppler">
+    Retain both in discovery until Grafana's product/API boundary and Doppler's authoritative machine-readable source are explicit.
+  </Step>
+</Steps>
+
+This sequence may be parallelized at the research stage. It should not produce multiple provider implementations before the first candidate passes the full conformance suite.
+
+## Candidate notes
+
+### Confluence Cloud v2
+
+- **Generation spike (2026-07-15):** Atlassian's OpenAPI 3.0.3 artifact identifies API version `2.0.0` and contains 218 operations. The local generator produced 217 operations, skipped one deprecated operation, and reported zero failures or unsupported methods.
+- **Audited artifact:** `https://dac-static.atlassian.com/cloud/confluence/openapi-v2.v3.json`, SHA-256 `c4bd1ed570f21cd6dee2360d9cda0d5aa09933233491c8286d60cc4fa16c5df5`.
+- Mirror the artifact before implementation because the download URL is mutable; pin the mirror commit and retain the source hash.
+- Inventory v2 resources against the actual Confluence workflows used by maintainers.
+- Validate OAuth 2 scopes, API-token authentication, cloud-site addressing, cursor links, and rate-limit behavior.
+- Confluence returns `_links.next` as a relative URL. The current generic pagination detector does not infer a cursor from that URL, so the provider needs a focused pagination adapter or a source-traceable generator extension with its own regression test.
+- Decide whether v1-only resources are excluded, separately packaged, or represented through a deliberately small compatibility layer.
+- Do not scaffold the publishable provider until the hardened shared generator has been released; downstream generation must be reproducible from declared package dependencies rather than a local filesystem override.
+
+### CircleCI API v2
+
+- Confirm that the published specification covers pipeline, workflow, job, insights, context, and project operations required in practice.
+- Test continuation tokens and authentication headers as transport-level conformance fixtures.
+- Keep webhook payload schemas separate if they are not authoritative parts of the API contract.
+
+### GitLab REST API
+
+- Pin both the contract commit and the supported GitLab release policy.
+- Model personal, project, job, OAuth, and session authentication without putting credentials in generic request inputs.
+- Treat pagination response headers, feature tiers, and self-managed base URLs as first-class provider behavior.
+
+### New Relic NerdGraph
+
+- Snapshot or otherwise pin the authoritative schema and document its provenance.
+- Separate GraphQL transport errors from the `errors` returned in successful HTTP responses.
+- Default query retries may be safe; mutations require explicit idempotency analysis.
+- Prefer checked-in named documents for high-value workflows over an unbounded generic client unless an ADR chooses otherwise.
+
+### Grafana HTTP APIs
+
+- Define whether the SDK targets OSS, Cloud, or a documented intersection.
+- Inventory the migration from legacy `/api` endpoints to Kubernetes-style `/apis` resources.
+- Verify service-account token behavior and avoid conflating deployment credentials with Grafana Cloud APIs.
+
+### Doppler API
+
+- Require a complete, versioned, machine-readable authority before accepting the candidate.
+- Apply the strictest secret-redaction posture: request values, response values, errors, spans, and fixtures must not expose secret material.
+- Capture documented rate-limit headers without treating all failures as retryable.
+
+## Promotion checklist
+
+A candidate can move from `Researching` to `Ready` when all of the following are true:
+
+- The authoritative source and exact pinning strategy are documented.
+- The provider boundary and deliberately unsupported surface are explicit.
+- Authentication, secrets, base URL, pagination, errors, rate limits, and idempotency have owners.
+- A generation spike reports total, generated, deprecated, unsupported, and failed operations without silently dropping failures.
+- Representative GET and mutation requests pass transport-shape tests.
+- Licensing and redistribution of the source and generated output have been reviewed.
+- The SDK has an implementation repository plan, source-mirror decision, ADRs, and release owner.
+
+## Backlog entry template
+
+Copy this section for each new idea. Keep unknowns visible rather than converting assumptions into commitments.
+
+```md
+### <Provider and API version>
+
+- **Status:** Proposed
+- **Priority:** P3
+- **Owner:** Unassigned
+- **Product fit:** <workflows and maintainers this would serve>
+- **Authoritative source:** <official URL, artifact type, version, and update cadence>
+- **Source strategy:** <mirror, extracted bundle, direct upstream submodule, or typed-source adapter>
+- **Factory strategy:** <OpenAPI, GraphQL, typed SDK AST, or new strategy requiring an ADR>
+- **Estimated effort:** S | M | L
+- **Provider boundary:** <included products, deployment modes, API versions, and explicit exclusions>
+- **Authentication:** <supported credential forms and secret-redaction requirements>
+- **Pagination:** <cursor, token, page number, headers, or none>
+- **Errors and retries:** <error envelopes, rate limits, idempotency, and mutation policy>
+- **Patches:** <known upstream defects and evidence, or none>
+- **License/provenance:** <source and redistribution posture>
+- **Exit question:** <single most important question before Ready>
+- **Decision:** <link to ADR or issue when accepted or declined>
+```
+
+When an SDK ships, move its operational facts into the [support matrix](/sdks/support-matrix) and keep only the decision record or a short historical note here.

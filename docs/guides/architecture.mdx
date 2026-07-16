@@ -10,6 +10,10 @@ sidebar:
 
 The shared `distilled` package is intentionally thin. It pins and re-exports Alchemy's `@distilled.cloud/core`, owns cross-provider generator adaptations, and exposes the common Effect runtime surface. Provider-specific behavior stays in each SDK.
 
+:::info
+The accepted [runtime parity decision](/guides/runtime-parity) makes this boundary explicit: inherited defects are recorded before divergence, upstream correction is preferred, and every local exception must be narrow, justified, and regression-tested.
+:::
+
 <TypeTable
   type={{
     shared: {

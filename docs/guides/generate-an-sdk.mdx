@@ -24,7 +24,7 @@ Choose the source strategy before writing generator code. The authority and shap
     Implement credentials, client wiring, error mapping, retry policy, and any pagination conventions in the provider repository.
   </Step>
   <Step title="Prove determinism">
-    Regenerate and fail when committed operations drift. Test generator adaptations with focused fixtures.
+    Regenerate and fail when committed operations or `coverage.json` drift. Review method totals and unsupported operations, and test generator adaptations with focused request-shape fixtures.
   </Step>
   <Step title="Publish independently">
     Release the provider package from its own trusted GitHub workflow.

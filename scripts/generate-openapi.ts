@@ -1,4 +1,4 @@
-// @ts-nocheck -- exact upstream Bun generator; validated through runtime fixtures.
+// @ts-nocheck -- vendored upstream Bun generator with focused, fixture-tested adaptations.
 /**
  * Vendored from alchemy-run/distilled@bf5f2b4:
  * packages/core/scripts/generate-openapi.ts
@@ -65,6 +65,9 @@ interface PathItem2 {
   put?: Operation2;
   patch?: Operation2;
   delete?: Operation2;
+  head?: Operation2;
+  options?: Operation2;
+  trace?: Operation2;
   // Path-level parameters shared by every operation on this path (Swagger 2.0
   // allows these, and Kubernetes puts `namespace`/`name`/`pretty` here as
   // `$ref`s). They must be merged into each operation's own parameters.
@@ -120,6 +123,9 @@ interface PathItem3 {
   put?: Operation3;
   patch?: Operation3;
   delete?: Operation3;
+  head?: Operation3;
+  options?: Operation3;
+  trace?: Operation3;
   parameters?: ParameterObject3[];
 }
 
@@ -219,6 +225,69 @@ export interface GeneratorConfig {
   apiVersion?: string;
 }
 
+const OPENAPI_HTTP_METHODS = [
+  "get",
+  "post",
+  "put",
+  "patch",
+  "delete",
+  "head",
+  "options",
+  "trace",
+] as const;
+
+type OpenAPIHttpMethod = (typeof OPENAPI_HTTP_METHODS)[number];
+type UppercaseHttpMethod = Uppercase<OpenAPIHttpMethod>;
+
+export interface GenerationCoverage {
+  readonly schemaVersion: 1;
+  readonly spec: {
+    readonly format: SpecVersion;
+    readonly title: string;
+    readonly version: string;
+  };
+  readonly configuration: {
+    readonly skipDeprecated: boolean;
+  };
+  readonly patches: {
+    readonly applied: readonly string[];
+    readonly skipped: readonly string[];
+  };
+  readonly operations: {
+    readonly total: number;
+    readonly deprecated: number;
+    readonly skippedDeprecated: number;
+    readonly attempted: number;
+    readonly generated: number;
+    readonly failed: number;
+    readonly unsupported: number;
+    readonly byMethod: Record<
+      UppercaseHttpMethod,
+      {
+        readonly total: number;
+        readonly deprecated: number;
+        readonly skippedDeprecated: number;
+        readonly attempted: number;
+        readonly generated: number;
+        readonly failed: number;
+      }
+    >;
+  };
+}
+
+export class OpenAPIGenerationError extends AggregateError {
+  readonly coverage: GenerationCoverage;
+
+  constructor(errors: readonly Error[], coverage: GenerationCoverage) {
+    super(
+      errors,
+      `OpenAPI generation failed for ${errors.length} operation${errors.length === 1 ? "" : "s"}`,
+    );
+    this.name = "OpenAPIGenerationError";
+    this.coverage = coverage;
+  }
+}
+
 // ============================================================================
 // Utility Functions
 // ============================================================================
@@ -240,6 +309,16 @@ function toPascalCase(s: string): string {
 
 function operationIdToFunctionName(operationId: string): string {
   return toCamelCase(operationId);
+}
+
+function renderHttpMethod(method: OpenAPIHttpMethod): string {
+  const rendered = `"${method.toUpperCase()}"`;
+  // The pinned Alchemy traits release predates OPTIONS/TRACE even though the
+  // Effect HTTP client handles both. Preserve the real runtime value while
+  // keeping generated sources type-checkable until that upstream union widens.
+  return method === "options" || method === "trace"
+    ? `${rendered} as unknown as T.HttpMethod`
+    : rendered;
 }
 
 function resolveOperationId(
@@ -1134,7 +1213,7 @@ interface GeneratedOperation {
 
 function generateInputSchemaSwagger(
   operationId: string,
-  method: string,
+  method: OpenAPIHttpMethod,
   pathTemplate: string,
   parameters: Parameter2[],
   spec: Swagger2Spec,
@@ -1148,6 +1227,7 @@ function generateInputSchemaSwagger(
   const queryParams = parameters.filter(
     (p) => p.in === "query" && !(apiVersion && p.name === "api-version"),
   );
+  const headerParams = parameters.filter((p) => p.in === "header");
   const bodyParam = parameters.find((p) => p.in === "body");
 
   const fields: string[] = [];
@@ -1203,7 +1283,39 @@ function generateInputSchemaSwagger(
     if (!param.required) {
       schema = `Schema.optional(${schema})`;
     }
-    fields.push(`  ${quotePropKey(param.name)}: ${schema},`);
+    fields.push(
+      `  ${quotePropKey(param.name)}: ${schema}.pipe(T.QueryParam(${JSON.stringify(param.name)})),`,
+    );
+    const tsBase = param.enum
+      ? paramEnumTs(param.enum, param.type)
+      : param.type === "integer" || param.type === "number"
+        ? "number"
+        : param.type === "boolean"
+          ? "boolean"
+          : "string";
+    tsFields.push(
+      `${quotePropKey(param.name)}${param.required ? "" : "?"}: ${tsBase}`,
+    );
+  }
+
+  // Header parameters
+  for (const param of headerParams) {
+    if (usedNames.has(param.name)) continue;
+    usedNames.add(param.name);
+    let schema = param.enum
+      ? renderEnumLiterals(param.enum, param.type)
+      : param.type === "integer" || param.type === "number"
+        ? "Schema.Number"
+        : param.type === "boolean"
+          ? "Schema.Boolean"
+          : "Schema.String";
+
+    if (!param.required) {
+      schema = `Schema.optional(${schema})`;
+    }
+    fields.push(
+      `  ${quotePropKey(param.name)}: ${schema}.pipe(T.HeaderParam(${JSON.stringify(param.name)})),`,
+    );
     const tsBase = param.enum
       ? paramEnumTs(param.enum, param.type)
       : param.type === "integer" || param.type === "number"
@@ -1290,7 +1402,7 @@ function generateInputSchemaSwagger(
   }
 
   const swaggerHttpTraitParts = [
-    `method: "${method.toUpperCase()}"`,
+    `method: ${renderHttpMethod(method)}`,
     `path: "${pathTemplate}"`,
   ];
   if (apiVersion) {
@@ -1343,7 +1455,7 @@ function resolveParameters3(
 
 function generateInputSchema3(
   operationId: string,
-  method: string,
+  method: OpenAPIHttpMethod,
   pathTemplate: string,
   parameters: ParameterObject3[],
   requestBodyParam: RequestBody3 | undefined,
@@ -1363,6 +1475,7 @@ function generateInputSchema3(
   const queryParams = parameters.filter(
     (p) => p.in === "query" && !(apiVersion && p.name === "api-version"),
   );
+  const headerParams = parameters.filter((p) => p.in === "header");
 
   const fields: string[] = [];
   const tsFields: string[] = [];
@@ -1397,7 +1510,27 @@ function generateInputSchema3(
     if (!param.required) {
       schemaStr = `Schema.optional(${schemaStr})`;
     }
-    fields.push(`  ${quotePropKey(param.name)}: ${schemaStr},`);
+    fields.push(
+      `  ${quotePropKey(param.name)}: ${schemaStr}.pipe(T.QueryParam(${JSON.stringify(param.name)})),`,
+    );
+    tsFields.push(
+      `${quotePropKey(param.name)}${param.required ? "" : "?"}: ${paramSchemaTs(schema)}`,
+    );
+  }
+
+  // Header parameters
+  for (const param of headerParams) {
+    if (usedNames.has(param.name)) continue;
+    usedNames.add(param.name);
+    const schema = param.schema;
+    let schemaStr = renderParameterSchema3(schema, spec, ctx);
+
+    if (!param.required) {
+      schemaStr = `Schema.optional(${schemaStr})`;
+    }
+    fields.push(
+      `  ${quotePropKey(param.name)}: ${schemaStr}.pipe(T.HeaderParam(${JSON.stringify(param.name)})),`,
+    );
     tsFields.push(
       `${quotePropKey(param.name)}${param.required ? "" : "?"}: ${paramSchemaTs(schema)}`,
     );
@@ -1491,7 +1624,7 @@ function generateInputSchema3(
   }
 
   const httpTraitParts = [
-    `method: "${method.toUpperCase()}"`,
+    `method: ${renderHttpMethod(method)}`,
     `path: "${pathTemplate}"`,
   ];
   if (bodyContentType) {
@@ -1747,7 +1880,143 @@ import * as T from "${traitsImport}.ts";`;
 // Main Generator
 // ============================================================================
 
-export function generateFromOpenAPI(config: GeneratorConfig): void {
+const GENERATED_FILE_HEADER =
+  "// Generated by @kevinmichaelchen/distilled. Do not edit by hand.";
+export const OPENAPI_COVERAGE_FILE_NAME = "coverage.json";
+
+type MutableMethodCoverage = {
+  total: number;
+  deprecated: number;
+  skippedDeprecated: number;
+  attempted: number;
+  generated: number;
+  failed: number;
+};
+
+function makeMethodCoverage(): Record<
+  UppercaseHttpMethod,
+  MutableMethodCoverage
+> {
+  return Object.fromEntries(
+    OPENAPI_HTTP_METHODS.map((method) => [
+      method.toUpperCase(),
+      {
+        total: 0,
+        deprecated: 0,
+        skippedDeprecated: 0,
+        attempted: 0,
+        generated: 0,
+        failed: 0,
+      },
+    ]),
+  ) as Record<UppercaseHttpMethod, MutableMethodCoverage>;
+}
+
+function countUnsupportedOperations(
+  paths: Record<string, Record<string, unknown>>,
+): number {
+  const metadataKeys = new Set([
+    "$ref",
+    "summary",
+    "description",
+    "servers",
+    "parameters",
+  ]);
+  const supported = new Set<string>(OPENAPI_HTTP_METHODS);
+  let count = 0;
+
+  for (const pathItem of Object.values(paths)) {
+    for (const [key, value] of Object.entries(pathItem)) {
+      if (supported.has(key) || metadataKeys.has(key) || key.startsWith("x-")) {
+        continue;
+      }
+      if (
+        value !== null &&
+        typeof value === "object" &&
+        "responses" in value
+      ) {
+        count += 1;
+      }
+    }
+  }
+  return count;
+}
+
+function makeOperationFailure(
+  method: OpenAPIHttpMethod,
+  pathTemplate: string,
+  operationId: string | undefined,
+  cause: unknown,
+): Error {
+  const detail = cause instanceof Error ? cause.message : String(cause);
+  return new Error(
+    `${method.toUpperCase()} ${pathTemplate}${operationId ? ` (${operationId})` : ""}: ${detail}`,
+    { cause },
+  );
+}
+
+function writeGeneratedOutput(
+  outputDir: string,
+  operations: readonly GeneratedOperation[],
+  coverage: GenerationCoverage,
+): void {
+  const parentDir = path.dirname(outputDir);
+  const outputName = path.basename(outputDir);
+  fs.mkdirSync(parentDir, { recursive: true });
+
+  const stagingDir = fs.mkdtempSync(
+    path.join(parentDir, `.${outputName}.staging-`),
+  );
+  let backupDir: string | undefined;
+
+  try {
+    for (const op of operations) {
+      fs.writeFileSync(path.join(stagingDir, op.fileName), op.code);
+    }
+
+    const barrelContent = `${GENERATED_FILE_HEADER}\n${operations
+      .map((op) => `export * from "./${op.functionName}.ts";`)
+      .join("\n")}\n`;
+    fs.writeFileSync(path.join(stagingDir, "index.ts"), barrelContent);
+    fs.writeFileSync(
+      path.join(stagingDir, OPENAPI_COVERAGE_FILE_NAME),
+      `${JSON.stringify(coverage, null, 2)}\n`,
+    );
+
+    if (fs.existsSync(outputDir)) {
+      backupDir = fs.mkdtempSync(
+        path.join(parentDir, `.${outputName}.backup-`),
+      );
+      fs.rmdirSync(backupDir);
+      fs.renameSync(outputDir, backupDir);
+    }
+
+    try {
+      fs.renameSync(stagingDir, outputDir);
+    } catch (error) {
+      if (backupDir && fs.existsSync(backupDir) && !fs.existsSync(outputDir)) {
+        fs.renameSync(backupDir, outputDir);
+        backupDir = undefined;
+      }
+      throw error;
+    }
+
+    if (backupDir) {
+      try {
+        fs.rmSync(backupDir, { recursive: true, force: true });
+      } catch (error) {
+        console.warn(`Could not remove generation backup ${backupDir}:`, error);
+      }
+      backupDir = undefined;
+    }
+  } finally {
+    fs.rmSync(stagingDir, { recursive: true, force: true });
+  }
+}
+
+export function generateFromOpenAPI(
+  config: GeneratorConfig,
+): GenerationCoverage {
   const specPath = path.resolve(config.specPath);
   const patchDir = path.resolve(config.patchDir);
   const outputDir = path.resolve(config.outputDir);
@@ -1772,18 +2041,11 @@ export function generateFromOpenAPI(config: GeneratorConfig): void {
     }
   }
   if (patchErrors.length > 0) {
-    console.error("Patch errors:");
-    for (const msg of patchErrors) {
-      console.error(`  ✗ ${msg}`);
-    }
-    process.exit(1);
+    throw new AggregateError(
+      patchErrors.map((message) => new Error(message)),
+      `Could not apply ${patchErrors.length} OpenAPI patch operation${patchErrors.length === 1 ? "" : "s"}`,
+    );
   }
-
-  // Generated operations are a complete projection of the patched spec.
-  // Recreate the directory so removed and case-renamed operations cannot
-  // survive a later generation pass as stale modules.
-  fs.rmSync(outputDir, { recursive: true, force: true });
-  fs.mkdirSync(outputDir, { recursive: true });
 
   // Status-to-error-class mapping
   const statusToErrorClass = config.statusToErrorClass ?? {
@@ -1802,17 +2064,38 @@ export function generateFromOpenAPI(config: GeneratorConfig): void {
   // Collect all operations
   const operations: GeneratedOperation[] = [];
   const usedFunctionNames = new Set<string>();
+  const failures: Error[] = [];
+  const byMethod = makeMethodCoverage();
+  let total = 0;
+  let deprecated = 0;
+  let skippedDeprecated = 0;
+  let attempted = 0;
+  let generated = 0;
+  let failed = 0;
+  const skipDeprecated = config.skipDeprecated !== false;
+  const unsupported = countUnsupportedOperations(spec.paths ?? {});
 
   if (version === "2.0") {
     // Swagger 2.0 codepath
     const swagger = spec as Swagger2Spec;
     for (const [pathTemplate, pathItem] of Object.entries(swagger.paths)) {
-      for (const method of ["get", "post", "put", "patch", "delete"] as const) {
+      for (const method of OPENAPI_HTTP_METHODS) {
         const operation = pathItem[method];
         if (!operation) continue;
-        if (config.skipDeprecated !== false && operation.deprecated) {
+        const methodCoverage = byMethod[method.toUpperCase() as UppercaseHttpMethod];
+        total += 1;
+        methodCoverage.total += 1;
+        if (operation.deprecated) {
+          deprecated += 1;
+          methodCoverage.deprecated += 1;
+        }
+        if (skipDeprecated && operation.deprecated) {
+          skippedDeprecated += 1;
+          methodCoverage.skippedDeprecated += 1;
           continue;
         }
+        attempted += 1;
+        methodCoverage.attempted += 1;
 
         try {
           const operationId = resolveOperationId(
@@ -1926,12 +2209,23 @@ export function generateFromOpenAPI(config: GeneratorConfig): void {
 
           operations.push({
             fileName: `${functionName}.ts`,
-            code,
+            code: `${GENERATED_FILE_HEADER}\n${code}`,
             functionName,
             exports: [inputSchemaName, outputSchemaName, functionName],
           });
+          generated += 1;
+          methodCoverage.generated += 1;
         } catch (error) {
-          console.error(`❌ ${operation.operationId ?? `${method} ${pathTemplate}`}:`, error);
+          failed += 1;
+          methodCoverage.failed += 1;
+          failures.push(
+            makeOperationFailure(
+              method,
+              pathTemplate,
+              operation.operationId,
+              error,
+            ),
+          );
         }
       }
     }
@@ -1941,12 +2235,23 @@ export function generateFromOpenAPI(config: GeneratorConfig): void {
     for (const [pathTemplate, pathItem] of Object.entries(oas.paths)) {
       const pathLevelParams = pathItem.parameters;
 
-      for (const method of ["get", "post", "put", "patch", "delete"] as const) {
+      for (const method of OPENAPI_HTTP_METHODS) {
         const operation = pathItem[method];
         if (!operation) continue;
-        if (config.skipDeprecated !== false && operation.deprecated) {
+        const methodCoverage = byMethod[method.toUpperCase() as UppercaseHttpMethod];
+        total += 1;
+        methodCoverage.total += 1;
+        if (operation.deprecated) {
+          deprecated += 1;
+          methodCoverage.deprecated += 1;
+        }
+        if (skipDeprecated && operation.deprecated) {
+          skippedDeprecated += 1;
+          methodCoverage.skippedDeprecated += 1;
           continue;
         }
+        attempted += 1;
+        methodCoverage.attempted += 1;
 
         try {
           const operationId = resolveOperationId(
@@ -2073,31 +2378,63 @@ export function generateFromOpenAPI(config: GeneratorConfig): void {
 
           operations.push({
             fileName: `${functionName}.ts`,
-            code,
+            code: `${GENERATED_FILE_HEADER}\n${code}`,
             functionName,
             exports: [inputSchemaName, outputSchemaName, functionName],
           });
+          generated += 1;
+          methodCoverage.generated += 1;
         } catch (error) {
-          console.error(`❌ ${operation.operationId ?? `${method} ${pathTemplate}`}:`, error);
+          failed += 1;
+          methodCoverage.failed += 1;
+          failures.push(
+            makeOperationFailure(
+              method,
+              pathTemplate,
+              operation.operationId,
+              error,
+            ),
+          );
         }
       }
     }
   }
 
-  // Write all operation files
-  for (const op of operations) {
-    const filePath = path.join(outputDir, op.fileName);
-    fs.writeFileSync(filePath, op.code);
-    console.log(`✅ ${op.functionName}`);
+  const coverage: GenerationCoverage = {
+    schemaVersion: 1,
+    spec: {
+      format: version,
+      title: String(spec.info?.title ?? ""),
+      version: String(spec.info?.version ?? ""),
+    },
+    configuration: { skipDeprecated },
+    patches: {
+      applied: [...applied],
+      skipped: [...patchSkipped],
+    },
+    operations: {
+      total,
+      deprecated,
+      skippedDeprecated,
+      attempted,
+      generated,
+      failed,
+      unsupported,
+      byMethod,
+    },
+  };
+
+  if (failures.length > 0) {
+    throw new OpenAPIGenerationError(failures, coverage);
   }
 
-  // Write barrel file
-  const barrelPath = path.join(outputDir, "index.ts");
-  const barrelContent =
-    operations
-      .map((op) => `export * from "./${op.functionName}.ts";`)
-      .join("\n") + "\n";
-  fs.writeFileSync(barrelPath, barrelContent);
+  // Stage the complete projection first. The existing directory remains
+  // untouched if operation generation or any staging write fails.
+  writeGeneratedOutput(outputDir, operations, coverage);
+  for (const op of operations) {
+    console.log(`✅ ${op.functionName}`);
+  }
+  return coverage;
 }
 
 // ============================================================================

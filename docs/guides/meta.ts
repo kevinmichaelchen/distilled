@@ -4,5 +4,11 @@ export default defineMeta({
   title: "Guides",
   icon: "book-open",
   order: 2,
-  pages: ["index", "architecture", "generate-an-sdk", "publishing"],
+  pages: [
+    "index",
+    "architecture",
+    "runtime-parity",
+    "generate-an-sdk",
+    "publishing",
+  ],
 });

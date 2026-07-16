@@ -1,0 +1,52 @@
+---
+title: "ADR-001: Preserve Alchemy runtime parity"
+description: Why the shared package remains a thin, pinned façade over Alchemy's Effect runtime.
+sidebar:
+  label: Runtime parity decision
+  icon: git-compare-arrows
+  order: 3
+---
+
+<Badge>Accepted</Badge>
+
+## Context
+
+The standalone SDK repositories need one stable import surface, while Alchemy maintains the Effect runtime that established the factory's behavior. Reimplementing or silently patching that runtime here would create two subtly different Distilled ecosystems and make upstream upgrades harder to review.
+
+The npm package does not currently include Alchemy's generator scripts. The shared repository therefore has one narrowly defined additional responsibility: it carries the audited generator source needed by the standalone providers.
+
+## Decision
+
+`@kevinmichaelchen/distilled` remains a thin façade pinned to an exact `@distilled.cloud/core` version.
+
+- Runtime subpaths directly re-export Alchemy's published modules. Alchemy parity—not an independent runtime—is the target.
+- An inherited runtime defect is reproduced and recorded in the private engineering tracker before any local behavioral divergence is considered.
+- Upstream correction followed by a deliberate core upgrade is preferred to a local runtime patch.
+- Local deviations are limited to capabilities unavailable from the published package or urgent cross-provider defects that cannot wait for an upstream release.
+- Every deviation must be small, source-traceable, justified in documentation, covered by a focused regression test, and assigned a removal or upstream-sync trigger.
+- Provider-specific behavior remains in the provider repository; it is not promoted into the façade to work around one SDK.
+
+:::info
+A private defect record can contain sensitive reproduction details. This public decision records the governance rule without exposing those details.
+:::
+
+## Current exception
+
+The OpenAPI generator is vendored from the Alchemy commit audited for the pinned core release because the npm package declares a generator export but omits `scripts/` from its published files. Cross-provider generator adaptations are reviewed as a diff from that source and require focused tests. This delivery exception does not authorize local runtime changes.
+
+## Change gate
+
+Before merging a divergence, the change owner must answer all of the following:
+
+1. Is the behavior inherited from the pinned Alchemy source, or introduced locally?
+2. Is it shared runtime behavior, generator behavior, or provider policy?
+3. Has an inherited defect been captured privately with a minimal reproduction?
+4. Can an Alchemy upgrade or upstream correction resolve it without a local fork?
+5. If not, what is the smallest cross-provider deviation, and what test proves its boundary?
+6. What event removes or resynchronizes the deviation?
+
+## Consequences
+
+This choice keeps Effect semantics aligned with Alchemy and makes dependency upgrades explicit. It can also mean carrying a known inherited defect until an upstream correction is available. That tradeoff is intentional: consumers should not receive an undocumented runtime fork under the same API shape.
+
+See the [factory architecture](/guides/architecture), [runtime reference](/reference/runtime), and [Alchemy lineage](/inspiration) for the surrounding boundaries and provenance.

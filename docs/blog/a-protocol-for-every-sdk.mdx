@@ -89,21 +89,84 @@ shared engine is published as
 [`@kevinmichaelchen/distilled@0.2.1`](https://www.npmjs.com/package/@kevinmichaelchen/distilled),
 and the [support matrix](/sdks/support-matrix) links every provider package.
 
-```ts
-import { Services } from "@kevinmichaelchen/distilled-github";
+### What changed in TypeScript
 
-const repository = yield* Services.repos.reposGet({
-  owner: "effect-ts",
-  repo: "effect",
-});
+The change is visible in application code, not only inside the factory. In the
+seven OpenAPI SDKs, flat operation exports moved into resource services. For
+operations with a JSON request payload, path and query values stay at the top
+level while the payload now sits under `body`.
+
+<Diff
+  lang="ts"
+  old={`import { pullsCreate } from "@kevinmichaelchen/distilled-github";
+
+const pullRequest = yield* pullsCreate({
+  owner: "acme",
+  repo: "payments",
+  title: "Reduce checkout latency",
+  head: "automation/checkout-cache",
+  base: "main",
+  body: "Adds a bounded cache around the pricing lookup.",
+});`}
+  new={`import { Services } from "@kevinmichaelchen/distilled-github";
+
+const pullRequest = yield* Services.pulls.pullsCreate({
+  owner: "acme",
+  repo: "payments",
+  body: {
+    title: "Reduce checkout latency",
+    head: "automation/checkout-cache",
+    base: "main",
+    body: "Adds a bounded cache around the pricing lookup.",
+  },
+});`}
+/>
+
+The same operation can be imported directly from the resource subpath—for
+example, `@kevinmichaelchen/distilled-github/pulls`. OpenAPI operations remain
+both directly callable and yieldable; that behavior did not begin with this
+release.
+
+<Expandable title="Show the type-level change">
+
+The generated contract now names the complete input, output, error, and Effect
+requirements. This simplified Jira example shows the difference:
+
+```ts
+type GetIssueBefore = OperationMethod<
+  GetIssueInput,
+  GetIssueOutput,
+  NotFound,
+  Credentials
+>;
+
+type GetIssueAfter = OperationMethod<
+  GetIssueInput,
+  GetIssueOutput,
+  GetIssueError,
+  JiraOpContext
+>;
+
+type GetIssueError = NotFound | JiraOpError;
+type JiraOpContext = Credentials | HttpClient.HttpClient;
 ```
 
-For OpenAPI SDKs, applications provide provider credentials and an Effect HTTP
-client. The GitHub operation above remains both directly callable and
-yieldable, so it composes like an ordinary Effect program. Slack operations are
-directly callable Effect values backed by `SlackProtocol`. The
-[GitHub SDK guide](/sdks/github) and [Slack SDK guide](/sdks/slack) cover
-installation, authentication, and more complete examples.
+The newer error union includes the declared endpoint failure plus provider,
+configuration, parsing, and transport failures. The context tells Effect that
+the operation needs credentials and an HTTP client. Missing environment
+credentials now produce a typed `ConfigError` instead of an Effect defect.
+These operation signatures are more truthful, although the
+[Protocol failure boundary](#what-still-deserves-work) still has room to become
+fully compiler-derived.
+
+</Expandable>
+
+Slack follows the same resource-grouped layout, but keeps the official
+`WebClient` input and output types. Its public layer changed from
+`SlackClientLive` to `SlackProtocolLive`, and its operation errors now include
+credential failures. The [runtime reference](/reference/runtime),
+[GitHub SDK guide](/sdks/github), and [Slack SDK guide](/sdks/slack) cover the
+current contracts and complete setup.
 
 ## Where the factory stands
 

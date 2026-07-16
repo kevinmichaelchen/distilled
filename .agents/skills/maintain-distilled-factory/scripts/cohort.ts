@@ -93,7 +93,7 @@ function parseCli(argv: readonly string[]): Cli {
   let allowDirty = false;
   const providers: string[] = [];
   for (let index = 0; index < rest.length; index += 1) {
-    const argument = rest[index];
+    const argument = rest[index]!;
     if (argument === "--dry-run") {
       dryRun = true;
       continue;

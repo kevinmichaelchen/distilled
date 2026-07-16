@@ -123,7 +123,7 @@ function parseCli(argv: readonly string[]): Cli {
   let coreOnly = false;
   const providers: string[] = [];
   for (let index = 0; index < argv.length; index += 1) {
-    const argument = argv[index];
+    const argument = argv[index]!;
     if (argument === "--registry") {
       registry = true;
       continue;

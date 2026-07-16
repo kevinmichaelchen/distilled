@@ -33,7 +33,7 @@
   },
   "scripts": {
     "prebuild": "node node_modules/typescript-compiler/bin/tsc -b tsconfig.build.json --clean",
-    "check": "bun run typecheck && bun test",
+    "check": "bun run typecheck && bun run skills:check && bun test",
     "build": "node node_modules/typescript-compiler/bin/tsc -p tsconfig.build.json",
     "docs:build": "bun run docs:check && blume build --strict",
     "docs:check": "bun scripts/sdk-docs.ts",
@@ -43,6 +43,7 @@
     "docs:preview": "blume preview",
     "docs:sync": "blume sync",
     "typecheck": "node node_modules/typescript-compiler/bin/tsc --noEmit",
+    "skills:check": "node node_modules/typescript-compiler/bin/tsc -p tsconfig.skills.json",
     "test": "bun test"
   },
   "peerDependencies": {

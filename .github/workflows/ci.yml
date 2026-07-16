@@ -4,23 +4,27 @@ on:
   pull_request:
     paths:
       - ".github/workflows/ci.yml"
+      - ".agents/skills/**"
       - "src/**"
       - "scripts/generate-openapi.ts"
       - "test/**"
       - "package.json"
       - "bun.lock"
       - "tsconfig.json"
+      - "tsconfig.skills.json"
       - "tsconfig.build.json"
   push:
     branches: [main]
     paths:
       - ".github/workflows/ci.yml"
+      - ".agents/skills/**"
       - "src/**"
       - "scripts/generate-openapi.ts"
       - "test/**"
       - "package.json"
       - "bun.lock"
       - "tsconfig.json"
+      - "tsconfig.skills.json"
       - "tsconfig.build.json"
   workflow_dispatch:
 

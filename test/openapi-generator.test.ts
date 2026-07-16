@@ -49,6 +49,7 @@ describe("OpenAPI service generator", () => {
           get: {
             tags: ["Team Management"],
             operationId: "teams.get",
+            summary: "Get a team  \r\n",
             parameters: [
               {
                 name: "enterprise-team",
@@ -113,6 +114,8 @@ describe("OpenAPI service generator", () => {
     expect(generated).toContain("output: TeamsGetOutput");
     expect(generated).toContain("protocol: TestProtocol");
     expect(generated).toContain("retry: Retry.Retry");
+    expect(generated).not.toMatch(/[ \t]+$/m);
+    expect(generated).not.toContain("\r");
     expect(await readFile(join(outputDir, "index.ts"), "utf8")).toContain(
       'export * as team_management from "./team_management.ts";',
     );

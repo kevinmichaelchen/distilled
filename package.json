@@ -1,6 +1,6 @@
 {
   "name": "@kevinmichaelchen/distilled",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Protocol-based Effect runtime and generators for Distilled SDKs",
   "type": "module",
   "license": "Apache-2.0",

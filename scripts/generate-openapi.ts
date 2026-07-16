@@ -1882,6 +1882,9 @@ function makeOperationFailure(
   );
 }
 
+const normalizeGeneratedSource = (source: string): string =>
+  source.replace(/\r\n?/g, "\n").replace(/[ \t]+$/gm, "");
+
 function writeGeneratedOutput(
   outputDir: string,
   operations: readonly GeneratedOperation[],
@@ -1933,7 +1936,7 @@ function writeGeneratedOutput(
             `import { ${[...bindings].join(", ")} } from "${source}";`,
         ),
       ];
-      const module = [
+      const module = normalizeGeneratedSource([
         GENERATED_FILE_HEADER,
         ...imports,
         "",
@@ -1941,7 +1944,7 @@ function writeGeneratedOutput(
           index === bodies.length - 1 ? [body] : [body, ""],
         ),
         "",
-      ].join("\n");
+      ].join("\n"));
       fs.writeFileSync(path.join(stagingDir, `${serviceName}.ts`), module);
     }
 

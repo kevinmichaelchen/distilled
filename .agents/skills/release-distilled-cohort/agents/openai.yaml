@@ -1,0 +1,4 @@
+interface:
+  display_name: "Release Distilled Cohort"
+  short_description: "Plan and verify coordinated SDK releases"
+  default_prompt: "Use $release-distilled-cohort to prepare a safe core-first release plan for the Distilled SDK cohort."

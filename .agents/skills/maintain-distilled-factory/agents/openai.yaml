@@ -1,0 +1,4 @@
+interface:
+  display_name: "Maintain Distilled Factory"
+  short_description: "Align and verify the Distilled SDK factory"
+  default_prompt: "Use $maintain-distilled-factory to audit an upstream-alignment change and verify every affected SDK."

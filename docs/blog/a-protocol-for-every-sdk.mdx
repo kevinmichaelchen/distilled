@@ -11,45 +11,83 @@ seo:
 
 An SDK has two jobs that look similar but are not the same. It gives application
 code a pleasant typed function, and it speaks a particular service's language
-over the network. The Distilled architecture draws a firm line between
-those jobs.
+over the network. The Distilled architecture draws a firm line between those
+jobs using [Effect](https://effect.website/docs).
+
+This article expands on the [`v0.6.0` release notes](/changelog/v0.6.0/), the
+[Protocol architecture decision](/guides/protocol-architecture), and the
+[runtime reference](/reference/runtime).
+
+Here, `v0.6.0` names the coordinated site release. The packages published in
+that release use the `0.2.x` version line.
+
+Our architectural reference is
+[Alchemy's Distilled repository](https://github.com/alchemy-run/distilled).
+The established package line is visible on
+[`main`](https://github.com/alchemy-run/distilled/tree/main), while the Protocol
+architecture lives on
+[`beta`](https://github.com/alchemy-run/distilled/tree/beta). Alchemy's exact
+[`2f748184` beta commit](https://github.com/alchemy-run/distilled/commit/2f748184b7774370c6599bd7d3b94711e68581b0)
+is the pinned architectural reference for this release.
 
 ## What changed
 
-Every generated operation now describes what it needs: its input and output
-types, HTTP method and path, request fields, possible errors, and Effect
-requirements. A provider Protocol handles the service-specific details such as
-credentials, base URLs, headers, response envelopes, and error messages.
+For the seven OpenAPI-backed SDKs, every generated operation now describes what
+it needs: its input and output types, HTTP method and path, request fields,
+possible errors, and Effect requirements. Our shared
+[`API.make` operation model](https://github.com/kevinmichaelchen/distilled/blob/9fd0c08fab7885ee453af5634826d20e26024759/src/api.ts#L20-L255)
+joins that description to a provider Protocol. The
+[HTTP trait machinery](https://github.com/kevinmichaelchen/distilled/blob/9fd0c08fab7885ee453af5634826d20e26024759/src/protocol-http.ts#L271-L434)
+handles common request structure, while each provider owns credentials, base
+URLs, headers, response envelopes, and error messages. Alchemy's
+[`API.make`](https://github.com/alchemy-run/distilled/blob/2f748184b7774370c6599bd7d3b94711e68581b0/packages/core/src/api.ts)
+and
+[HTTP trait implementation](https://github.com/alchemy-run/distilled/blob/2f748184b7774370c6599bd7d3b94711e68581b0/packages/core/src/protocol-http.ts)
+are the upstream references for that split.
 
-The shared engine joins them at runtime:
+For those providers, the shared engine joins them at runtime:
 
 ```text
 typed operation → provider Protocol → Effect HTTP client → provider Protocol → typed result
 ```
 
-GitHub and Jira can therefore share operation semantics without pretending
-that GitHub's bearer token and Jira's basic authentication are the same thing.
-Slack follows the same service layout while delegating transport to Slack's
-official typed `WebClient`.
+[GitHub](/sdks/github) and [Jira](/sdks/jira) can therefore share operation
+semantics without pretending that GitHub's bearer token and Jira's basic
+authentication are the same thing. [Slack](/sdks/slack) follows the same
+resource-grouped service layout, but its
+[Slack Protocol](https://github.com/kevinmichaelchen/distilled-slack/blob/8bdb5078d063aee953902d4ffa962898c800d3cf/src/protocol.ts)
+deliberately bypasses the HTTP-trait path and delegates transport to Slack's
+official typed
+[`WebClient`](https://github.com/slackapi/node-slack-sdk/blob/70e15b8442745d215f9ae259a2c970b306aff51a/packages/web-api/src/WebClient.ts).
+Alchemy's
+[Cloudflare Protocol](https://github.com/alchemy-run/distilled/blob/2f748184b7774370c6599bd7d3b94711e68581b0/packages/cloudflare/src/protocol.ts)
+shows the same provider-owned boundary in the upstream beta branch.
 
 ## Why this is better
 
-The separation makes behavior easier to reason about. Credentials are resolved
-for each call, so rotation and refresh can work without reconstructing provider
-state. Errors say which provider and transport failures can actually occur.
-Request routing comes from schema traits rather than a generic body-building
-guess. Retry behavior is attached only to safe methods unless a provider makes
-an explicit decision for a mutation.
+For OpenAPI providers, the separation makes behavior easier to reason about.
+Credentials are resolved for each call, so rotation and refresh can work
+without reconstructing provider state. Errors say which provider and transport
+failures can actually occur. Request routing comes from the
+[schema-trait contract](/guides/protocol-architecture#decision) rather than a
+generic body-building guess. Retry behavior is attached only to safe methods
+unless a provider makes an explicit decision for a mutation. Slack gets the
+same per-call credential resolution and typed Effect failures through its
+WebClient adapter.
 
 Generation is safer too. A broken source or patch cannot leave a half-updated
-SDK behind while still reporting success. The generator builds a complete
-staging tree, verifies every operation, and swaps it into place only after the
-whole run succeeds.
+SDK behind while still reporting success. The
+[OpenAPI generator](/reference/generator) builds a complete staging tree,
+verifies every operation, and swaps it into place only after the whole run
+succeeds.
 
 ## What this means for users
 
-The `0.2.0` packages group operations by resource and make them available from
-the root `Services` namespace or a direct service subpath.
+The `0.2.0` provider packages group operations by resource and make them
+available from the root `Services` namespace or a direct service subpath. The
+shared engine is published as
+[`@kevinmichaelchen/distilled@0.2.1`](https://www.npmjs.com/package/@kevinmichaelchen/distilled),
+and the [support matrix](/sdks/support-matrix) links every provider package.
 
 ```ts
 import { Services } from "@kevinmichaelchen/distilled-github";
@@ -60,17 +98,24 @@ const repository = yield* Services.repos.reposGet({
 });
 ```
 
-Applications provide provider credentials and an Effect HTTP client. The
-operation remains both directly callable and yieldable, so it composes like an
-ordinary Effect program.
+For OpenAPI SDKs, applications provide provider credentials and an Effect HTTP
+client. The GitHub operation above remains both directly callable and
+yieldable, so it composes like an ordinary Effect program. Slack operations are
+directly callable Effect values backed by `SlackProtocol`. The
+[GitHub SDK guide](/sdks/github) and [Slack SDK guide](/sdks/slack) cover
+installation, authentication, and more complete examples.
 
 ## Where the factory stands
 
-The eight SDKs now expose 4,066 operations from their latest pinned sources.
-OpenSearch gained ten HEAD operations that its contract had always described.
-All OpenAPI providers regenerate with zero failed or unsupported operations.
-Publishing then typechecks, tests, and builds the committed projection before
-it reaches npm.
+The [eight SDKs](/sdks) now expose 4,066 operations from their latest pinned
+sources. [OpenSearch](/sdks/opensearch) gained ten HEAD operations that its
+contract had always described. All OpenAPI providers regenerate with zero
+failed or unsupported operations. Publishing then typechecks, tests, and builds
+the committed projection before it reaches npm. The implementation is
+reviewable in the
+[`kevinmichaelchen/distilled` repository](https://github.com/kevinmichaelchen/distilled);
+the Protocol architecture entered the shared core in
+[`2b37201`](https://github.com/kevinmichaelchen/distilled/commit/2b3720159878776fea9c74fa948e2da7db540ff5).
 
 ## What still deserves work
 
@@ -78,10 +123,36 @@ The architecture is stronger, but the work is not finished. We still want a
 fully typed Protocol error boundary, richer nested-query encoding, clearer
 schema-aware output decoding, synchronized OAuth refresh caching, and live
 provider integration tests in addition to deterministic transport fixtures.
-Alchemy's Protocol work is still evolving, so future releases should continue
-to follow its public operation shape while treating unreleased implementation
-details as provisional.
+Alchemy's [Protocol work on `beta`](https://github.com/alchemy-run/distilled/tree/beta)
+is still evolving, so future releases should continue to follow its public
+operation shape while treating unreleased implementation details as
+provisional. The
+[unlisted beta audit](https://gist.github.com/kevinmichaelchen/67508b68a84402d3163413e3f3e826b5)
+records the remaining upstream questions with exact source links.
 
 Those are bounded improvements now. The important part is already structural:
 one operation model, one shared engine, and a provider Protocol wherever APIs
 genuinely differ.
+
+## Follow the work
+
+<CardGroup cols={2}>
+  <Card title="v0.6.0 release notes" href="/changelog/v0.6.0/" icon="list-checks">
+    Package versions, operation counts, behavior changes, and verification.
+  </Card>
+  <Card title="Protocol architecture" href="/guides/protocol-architecture" icon="git-compare-arrows">
+    The accepted architecture decision and alignment rule.
+  </Card>
+  <Card title="Runtime reference" href="/reference/runtime" icon="braces">
+    Operation types, provider Protocols, schemas, retries, and pagination.
+  </Card>
+  <Card title="SDK support matrix" href="/sdks/support-matrix" icon="table-properties">
+    Every released provider, version, operation count, source, and authentication model.
+  </Card>
+  <Card title="Alchemy beta source" href="https://github.com/alchemy-run/distilled/tree/beta" icon="github">
+    The upstream Protocol architecture used as the reference.
+  </Card>
+  <Card title="Beta architecture audit" href="https://gist.github.com/kevinmichaelchen/67508b68a84402d3163413e3f3e826b5" icon="search-code">
+    An unlisted, source-linked review of the current beta branch.
+  </Card>
+</CardGroup>

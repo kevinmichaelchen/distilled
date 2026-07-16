@@ -1,0 +1,172 @@
+---
+import { getCollection } from "astro:content";
+import data from "blume:data";
+import { contentHref } from "blume/components/content/base-href.ts";
+import PageLayout from "blume/components/layout/PageLayout.astro";
+
+const title = "Blog — Distilled";
+const description =
+  "SDK releases, architecture notes, and lessons from the Distilled software factory.";
+
+const routeById = new Map(
+  data.routes.map((route) => [route.entryId, route.path]),
+);
+const dateFormatter = new Intl.DateTimeFormat("en-US", {
+  day: "numeric",
+  month: "long",
+  timeZone: "UTC",
+  year: "numeric",
+});
+const publishedThrough = Date.now();
+
+const posts = (await getCollection("docs"))
+  .filter(
+    (entry) =>
+      entry.data.type === "blog" &&
+      !entry.data.draft &&
+      !entry.data.hidden,
+  )
+  .map((entry) => {
+    const href = routeById.get(entry.id);
+    if (!href) {
+      throw new Error(`Blog post "${entry.id}" does not have a resolved route.`);
+    }
+    if (!entry.data.date) {
+      throw new Error(`Blog post "${entry.id}" does not have a publication date.`);
+    }
+
+    const publishedAt =
+      entry.data.date instanceof Date
+        ? entry.data.date
+        : new Date(String(entry.data.date));
+    if (Number.isNaN(publishedAt.getTime())) {
+      throw new Error(`Blog post "${entry.id}" has an invalid publication date.`);
+    }
+    if (!entry.data.title) {
+      throw new Error(`Blog post "${entry.id}" does not have a title.`);
+    }
+    if (!entry.data.description) {
+      throw new Error(`Blog post "${entry.id}" does not have a description.`);
+    }
+
+    return {
+      description: entry.data.description,
+      href,
+      publishedAt,
+      publishedLabel: dateFormatter.format(publishedAt),
+      title: entry.data.title,
+    };
+  })
+  .filter((post) => post.publishedAt.getTime() <= publishedThrough)
+  .toSorted(
+    (a, b) =>
+      b.publishedAt.getTime() - a.publishedAt.getTime() ||
+      a.href.localeCompare(b.href),
+  );
+
+const absoluteUrl = (href: string): string | undefined =>
+  data.config.site
+    ? new URL(contentHref(href), data.config.site).toString()
+    : undefined;
+const structuredData = {
+  "@context": "https://schema.org",
+  "@type": "Blog",
+  blogPost: posts.map((post) => ({
+    "@type": "BlogPosting",
+    datePublished: post.publishedAt.toISOString(),
+    description: post.description,
+    headline: post.title,
+    url: absoluteUrl(post.href),
+  })),
+  description,
+  name: title,
+  url: absoluteUrl("/blog"),
+};
+---
+
+<PageLayout
+  analytics={data.config.analytics}
+  appleIcon={data.config.appleIcon}
+  banner={data.config.banner}
+  favicon={data.config.favicon}
+  fontCssVars={data.fontCssVars}
+  logo={data.config.logo}
+  navigation={data.navigation}
+  ogEnabled={data.config.og.enabled}
+  page={{ title, description, route: "/blog" }}
+  searchEnabled={data.config.search.enabled}
+  site={{ title: data.config.title, description: data.config.description }}
+  siteUrl={data.config.site}
+  themeMode={data.config.theme.mode}
+>
+  <script
+    is:inline
+    set:html={JSON.stringify(structuredData).replaceAll("<", "\\u003c")}
+    type="application/ld+json"
+  />
+  <section class="mx-auto w-full max-w-5xl px-6 py-16 sm:py-24">
+    <header class="max-w-3xl">
+      <p class="mb-4 font-medium text-accent text-sm uppercase tracking-[0.16em]">
+        Distilled journal
+      </p>
+      <h1 class="m-0 text-balance font-semibold text-4xl text-foreground tracking-tight sm:text-5xl">
+        Notes from the SDK factory
+      </h1>
+      <p class="mt-5 max-w-2xl text-balance text-lg text-muted-foreground leading-8">
+        Release announcements, architecture decisions, and practical lessons.
+        Every post is listed newest first.
+      </p>
+      <p class="mt-4 text-muted-foreground text-sm">
+        {posts.length} {posts.length === 1 ? "post" : "posts"}
+      </p>
+    </header>
+
+    {
+      posts.length === 0 ? (
+        <p class="mt-12 rounded-blume border border-border bg-muted/30 p-6 text-muted-foreground">
+          No posts have been published yet.
+        </p>
+      ) : (
+        <ol class="mt-12 border-border border-y" data-blog-list>
+          {posts.map((post, index) => (
+            <li
+              class="grid gap-4 border-border border-b py-8 last:border-b-0 sm:grid-cols-[9rem_minmax(0,1fr)] sm:gap-8"
+              data-blog-href={post.href}
+              data-published-at={post.publishedAt.toISOString()}
+            >
+              <div class="flex items-center gap-3 sm:block sm:pt-5">
+                <time
+                  class="block font-medium text-foreground text-sm"
+                  datetime={post.publishedAt.toISOString()}
+                >
+                  {post.publishedLabel}
+                </time>
+                {index === 0 && (
+                  <span class="mt-0 inline-flex rounded-full bg-accent/10 px-2.5 py-1 font-medium text-accent text-xs sm:mt-3">
+                    Latest
+                  </span>
+                )}
+              </div>
+              <article class="overflow-hidden rounded-blume border border-border bg-background transition-colors hover:border-accent">
+                <a
+                  class="block p-5 text-inherit no-underline outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+                  href={contentHref(post.href)}
+                >
+                  <h2 class="m-0 font-medium text-foreground text-xl tracking-tight">
+                    {post.title}
+                  </h2>
+                  <p class="mt-3 mb-0 text-muted-foreground text-sm leading-6">
+                    {post.description}
+                  </p>
+                  <p class="mt-5 mb-0 font-medium text-accent text-sm">
+                    Read article <span aria-hidden="true">→</span>
+                  </p>
+                </a>
+              </article>
+            </li>
+          ))}
+        </ol>
+      )
+    }
+  </section>
+</PageLayout>

@@ -1,4 +1,37 @@
-import { defineConfig } from "blume";
+import { defineConfig, type FolderMetaDefinition } from "blume";
+
+import changelogMetaDefinition from "./docs/changelog/meta";
+import guidesMetaDefinition from "./docs/guides/meta";
+import referenceMetaDefinition from "./docs/reference/meta";
+import sdksMetaDefinition from "./docs/sdks/meta";
+
+const sidebarSection = (
+  root: string,
+  definition: FolderMetaDefinition,
+) => {
+  if (typeof definition === "function") {
+    throw new TypeError(`Sidebar metadata for ${root} must be static.`);
+  }
+
+  return {
+    icon: definition.icon,
+    items: (definition.pages ?? []).map((page) =>
+      page === "index" ? root : `${root}/${page}`,
+    ),
+    label: definition.title ?? root.slice(1),
+    order: definition.order ?? Number.POSITIVE_INFINITY,
+    root,
+  };
+};
+
+const sidebarSections = [
+  sidebarSection("/guides", guidesMetaDefinition),
+  sidebarSection("/sdks", sdksMetaDefinition),
+  sidebarSection("/reference", referenceMetaDefinition),
+  sidebarSection("/changelog", changelogMetaDefinition),
+]
+  .toSorted((a, b) => a.order - b.order)
+  .map(({ order: _order, ...section }) => section);
 
 export default defineConfig({
   title: "Distilled",
@@ -33,7 +66,12 @@ export default defineConfig({
     featured: [
       { label: "Blog", href: "/blog", icon: "newspaper" },
     ],
-    sidebar: { display: "group" },
+    // Blume excludes sidebar-hidden pages from RSS and other discovery output.
+    // Keep blog posts publishable, but omit their section from docs navigation.
+    sidebar: {
+      display: "group",
+      items: ["/", "/inspiration", ...sidebarSections],
+    },
   },
   theme: {
     accent: { light: "#0f766e", dark: "#5eead4" },

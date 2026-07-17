@@ -2,6 +2,7 @@
 import { getCollection } from "astro:content";
 import data from "blume:data";
 import { contentHref } from "blume/components/content/base-href.ts";
+import { withBase } from "blume/components/islands/base-path.ts";
 import PageLayout from "blume/components/layout/PageLayout.astro";
 
 const title = "Blog — Distilled";
@@ -116,9 +117,19 @@ const structuredData = {
         Release announcements, architecture decisions, and practical lessons.
         Every post is listed newest first.
       </p>
-      <p class="mt-4 text-muted-foreground text-sm">
-        {posts.length} {posts.length === 1 ? "post" : "posts"}
-      </p>
+      <div class="mt-4 flex items-center gap-3 text-sm">
+        <p class="m-0 text-muted-foreground">
+          {posts.length} {posts.length === 1 ? "post" : "posts"}
+        </p>
+        <span aria-hidden="true" class="text-muted-foreground">·</span>
+        <a
+          class="font-medium text-accent no-underline hover:underline"
+          href={withBase("/blog/rss.xml")}
+          type="application/rss+xml"
+        >
+          RSS feed
+        </a>
+      </div>
     </header>
 
     {

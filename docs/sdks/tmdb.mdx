@@ -3,7 +3,7 @@ title: TMDB SDK
 description: Search and inspect films, television, people, credits, and trending media with 152 Effect-native TMDB v3 operations.
 sidebar:
   icon: clapperboard
-  badge: 0.1.0
+  badge: 0.1.1
   order: 10
 ---
 
@@ -16,22 +16,24 @@ The TMDB SDK projects the official TMDB v3 OpenAPI document into Effect operatio
 <CodeGroup>
 
 ```bash npm
-npm install @kevinmichaelchen/distilled-tmdb@0.1.0 effect@4.0.0-beta.99
+npm install @kevinmichaelchen/distilled-tmdb@0.1.1 effect@4.0.0-beta.99
 ```
 
 ```bash pnpm
-pnpm add @kevinmichaelchen/distilled-tmdb@0.1.0 effect@4.0.0-beta.99
+pnpm add @kevinmichaelchen/distilled-tmdb@0.1.1 effect@4.0.0-beta.99
 ```
 
 ```bash bun
-bun add @kevinmichaelchen/distilled-tmdb@0.1.0 effect@4.0.0-beta.99
+bun add @kevinmichaelchen/distilled-tmdb@0.1.1 effect@4.0.0-beta.99
 ```
 
 </CodeGroup>
 
 ## Authentication
 
-Create a TMDB API read access token and set `TMDB_API_READ_ACCESS_TOKEN`. The SDK sends it as a redacted bearer token. For migration compatibility, `TMDB_API_KEY` is accepted as the legacy variable name used by `movie-effect`, but its value must still be the API read access token—not a v3 API key. `TMDB_API_URL` can override the default endpoint.
+Create a TMDB API Read Access Token and set `TMDB_API_READ_ACCESS_TOKEN`. The SDK sends it as a redacted bearer token. `TMDB_API_URL` can override the default endpoint.
+
+The SDK deliberately does not read `TMDB_API_KEY`. TMDB also supports an API key through the separate `api_key` query parameter, but this package currently exposes only the bearer-token path so its credential behavior stays unambiguous.
 
 The package is developed and tested with Effect `4.0.0-beta.99`; its peer range also accepts compatible Effect 4 releases from beta 97 onward.
 

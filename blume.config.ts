@@ -43,10 +43,10 @@ export default defineConfig({
     href: "/",
   },
   banner: {
-    content: "Nine Effect-native SDKs, now including TMDB.",
-    link: { text: "Read the release", href: "/changelog/v0.7.0" },
+    content: "TMDB 0.1.1 now uses one explicit bearer-token setting.",
+    link: { text: "Read the release", href: "/changelog/v0.7.1" },
     dismissible: true,
-    id: "distilled-tmdb-release",
+    id: "distilled-tmdb-0-1-1",
   },
   content: {
     root: "docs",

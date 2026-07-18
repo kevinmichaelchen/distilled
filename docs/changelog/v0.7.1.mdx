@@ -1,0 +1,33 @@
+---
+title: v0.7.1
+description: TMDB authentication now uses one explicit bearer-token environment variable.
+type: changelog
+date: 2026-07-18
+changelog:
+  version: 0.7.1
+  category: Fix
+sidebar:
+  label: v0.7.1
+  order: 1
+---
+
+TMDB credentials now match the authentication mode the SDK actually implements.
+
+## Released
+
+- [`@kevinmichaelchen/distilled-tmdb@0.1.1`](https://www.npmjs.com/package/@kevinmichaelchen/distilled-tmdb)
+
+## Changed
+
+- Removed `TMDB_API_KEY` as a fallback environment-variable name for bearer tokens.
+- Standardized environment-based authentication on `TMDB_API_READ_ACCESS_TOKEN`.
+- Clarified that TMDB's real API-key authentication uses the separate `api_key` query parameter and is not currently implemented by the SDK.
+- Updated the existing announcement and SDK guide rather than publishing a second announcement.
+
+## Why
+
+The 0.1.0 fallback inherited a name from `movie-effect`, but the Distilled Protocol always sent its value as an `Authorization: Bearer` header. Removing the alias makes configuration describe actual runtime behavior and avoids confusing an API key with an API Read Access Token.
+
+## Verified
+
+The patch passed typechecking, tests, deterministic regeneration, build checks, package inspection, and npm trusted publishing with signed provenance.

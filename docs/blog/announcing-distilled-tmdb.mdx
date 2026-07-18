@@ -9,6 +9,10 @@ seo:
 
 [`@kevinmichaelchen/distilled-tmdb`](https://www.npmjs.com/package/@kevinmichaelchen/distilled-tmdb) brings 152 TMDB v3 operations into Effect. It covers movies, television, people, search, discovery, trending media, credits, watch providers, lists, authentication, and account workflows while preserving TMDB's vendor-native request and response shapes.
 
+:::note[Updated in 0.1.1]
+The SDK now reads only `TMDB_API_READ_ACCESS_TOKEN`. It no longer accepts the old `TMDB_API_KEY` variable name for bearer tokens; TMDB's actual API-key authentication is a separate `api_key` query mechanism and is not implemented by this package.
+:::
+
 ## Why TMDB is the first media SDK
 
 The earlier `movie-effect` project proved the usefulness of a small normalized movie client, but each provider accumulated its own transport and error conventions. TMDB is the first media API moved into the Distilled architecture: generated schemas and operations come from an exact upstream contract, while a compact handwritten Protocol owns bearer authentication, typed failures, retry hints, and HTTP behavior.
@@ -29,7 +33,7 @@ This release does not deprecate `movie-effect`. It establishes the vendor-native
 Set `TMDB_API_READ_ACCESS_TOKEN`, then install the SDK and Effect:
 
 ```bash
-npm install @kevinmichaelchen/distilled-tmdb@0.1.0 effect@4.0.0-beta.99
+npm install @kevinmichaelchen/distilled-tmdb@0.1.1 effect@4.0.0-beta.99
 ```
 
 ```ts

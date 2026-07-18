@@ -94,5 +94,17 @@
     "authentication": "Basic, bearer, or custom signer",
     "implementationVisibility": "Private",
     "specificationVisibility": "Private"
+  },
+  {
+    "id": "tmdb",
+    "name": "TMDB",
+    "package": "@kevinmichaelchen/distilled-tmdb",
+    "version": "0.1.0",
+    "operations": 152,
+    "source": "TMDB v3 OpenAPI 3.1",
+    "strategy": "Mirrored specification",
+    "authentication": "Bearer token",
+    "implementationVisibility": "Public",
+    "specificationVisibility": "Public"
   }
 ]

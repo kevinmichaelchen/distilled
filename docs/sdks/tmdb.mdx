@@ -1,0 +1,79 @@
+---
+title: TMDB SDK
+description: Search and inspect films, television, people, credits, and trending media with 152 Effect-native TMDB v3 operations.
+sidebar:
+  icon: clapperboard
+  badge: 0.1.0
+  order: 10
+---
+
+<Badge variant="success">Public package</Badge> <Badge>OpenAPI 3.1</Badge> <Badge>152 operations</Badge>
+
+The TMDB SDK projects the official TMDB v3 OpenAPI document into Effect operations while keeping authentication, error decoding, retry hints, and configurable API addressing in a handwritten Protocol.
+
+## Install
+
+<CodeGroup>
+
+```bash npm
+npm install @kevinmichaelchen/distilled-tmdb@0.1.0 effect@4.0.0-beta.99
+```
+
+```bash pnpm
+pnpm add @kevinmichaelchen/distilled-tmdb@0.1.0 effect@4.0.0-beta.99
+```
+
+```bash bun
+bun add @kevinmichaelchen/distilled-tmdb@0.1.0 effect@4.0.0-beta.99
+```
+
+</CodeGroup>
+
+## Authentication
+
+Create a TMDB API read access token and set `TMDB_API_READ_ACCESS_TOKEN`. The SDK sends it as a redacted bearer token. For migration compatibility, `TMDB_API_KEY` is accepted as the legacy variable name used by `movie-effect`, but its value must still be the API read access token—not a v3 API key. `TMDB_API_URL` can override the default endpoint.
+
+The package is developed and tested with Effect `4.0.0-beta.99`; its peer range also accepts compatible Effect 4 releases from beta 97 onward.
+
+## Quickstart
+
+Fetch the details for *Fight Club*:
+
+```ts
+import * as Effect from "effect/Effect";
+import * as Layer from "effect/Layer";
+import * as FetchHttpClient from "effect/unstable/http/FetchHttpClient";
+import {
+  CredentialsFromEnv,
+  Services,
+} from "@kevinmichaelchen/distilled-tmdb";
+
+const TmdbLive = Layer.mergeAll(
+  FetchHttpClient.layer,
+  CredentialsFromEnv,
+);
+
+const movie = await Effect.runPromise(
+  Services.movie.movieDetails({ movie_id: 550 }).pipe(
+    Effect.provide(TmdbLive),
+  ),
+);
+```
+
+The same layer supports search, discovery, trending media, credits, people, television, watch providers, lists, and account operations. Direct resource subpaths are also available, such as `@kevinmichaelchen/distilled-tmdb/movie`.
+
+## Source and package
+
+<CardGroup cols={3}>
+  <Card title="npm package" href="https://www.npmjs.com/package/@kevinmichaelchen/distilled-tmdb" icon="package-open">
+    Public package with generated source, declarations, and signed provenance.
+  </Card>
+  <Card title="Implementation" href="https://github.com/kevinmichaelchen/distilled-tmdb" icon="github">
+    Public Protocol implementation and 152 committed operations.
+  </Card>
+  <Card title="Specification" href="https://github.com/kevinmichaelchen/distilled-spec-tmdb" icon="file-code-2">
+    Public mirror of TMDB's official OpenAPI 3.1 document.
+  </Card>
+</CardGroup>
+
+The implementation pins the specification as a Git submodule and CI rejects generated drift before publishing through npm trusted publishing with GitHub OIDC.

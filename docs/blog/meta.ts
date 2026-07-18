@@ -6,6 +6,7 @@ export default defineMeta({
   order: 5,
   pages: [
     "index",
+    "announcing-distilled-tmdb",
     "a-protocol-for-every-sdk",
     "announcing-distilled-basis-theory",
     "announcing-distilled-jira",

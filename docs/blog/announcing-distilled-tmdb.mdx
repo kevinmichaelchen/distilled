@@ -1,0 +1,59 @@
+---
+title: Announcing the Distilled TMDB SDK
+description: Search films and television, inspect credits, and discover trending media through 152 Effect-native TMDB v3 operations.
+type: blog
+date: "2026-07-18T15:01:09.127Z"
+seo:
+  title: Announcing the Effect-native Distilled TMDB SDK
+---
+
+[`@kevinmichaelchen/distilled-tmdb`](https://www.npmjs.com/package/@kevinmichaelchen/distilled-tmdb) brings 152 TMDB v3 operations into Effect. It covers movies, television, people, search, discovery, trending media, credits, watch providers, lists, authentication, and account workflows while preserving TMDB's vendor-native request and response shapes.
+
+## Why TMDB is the first media SDK
+
+The earlier `movie-effect` project proved the usefulness of a small normalized movie client, but each provider accumulated its own transport and error conventions. TMDB is the first media API moved into the Distilled architecture: generated schemas and operations come from an exact upstream contract, while a compact handwritten Protocol owns bearer authentication, typed failures, retry hints, and HTTP behavior.
+
+This release does not deprecate `movie-effect`. It establishes the vendor-native foundation first; migration and any later cross-provider facade can follow once the new media SDKs have proven their shape.
+
+## Generated from the official contract
+
+<Steps>
+  <Step title="Pin the source">A public specification repository mirrors TMDB's official OpenAPI 3.1 document at an exact commit.</Step>
+  <Step title="Generate every represented operation">The shared OpenAPI generator emits 152 resource-grouped operations with typed inputs, outputs, errors, and context.</Step>
+  <Step title="Keep policy handwritten">The TMDB Protocol resolves redacted credentials per request, sends bearer authentication, decodes TMDB error envelopes, and preserves retry metadata.</Step>
+  <Step title="Prove the release">CI typechecks, tests, regenerates, builds, and publishes with signed npm provenance through GitHub OIDC.</Step>
+</Steps>
+
+## Get started
+
+Set `TMDB_API_READ_ACCESS_TOKEN`, then install the SDK and Effect:
+
+```bash
+npm install @kevinmichaelchen/distilled-tmdb@0.1.0 effect@4.0.0-beta.99
+```
+
+```ts
+import * as Effect from "effect/Effect";
+import * as Layer from "effect/Layer";
+import * as FetchHttpClient from "effect/unstable/http/FetchHttpClient";
+import {
+  CredentialsFromEnv,
+  Services,
+} from "@kevinmichaelchen/distilled-tmdb";
+
+const TmdbLive = Layer.mergeAll(
+  FetchHttpClient.layer,
+  CredentialsFromEnv,
+);
+
+const program = Effect.all({
+  movie: Services.movie.movieDetails({ movie_id: 550 }),
+  trending: Services.trending.trendingAll({
+    time_window: "day",
+  }),
+}).pipe(Effect.provide(TmdbLive));
+
+const result = await Effect.runPromise(program);
+```
+
+Read the [TMDB SDK guide](/sdks/tmdb), inspect the [implementation](https://github.com/kevinmichaelchen/distilled-tmdb), browse the [specification mirror](https://github.com/kevinmichaelchen/distilled-spec-tmdb), or install the [public npm package](https://www.npmjs.com/package/@kevinmichaelchen/distilled-tmdb).

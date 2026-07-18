@@ -4,3 +4,4 @@ dist/
 .blume/
 *.tsbuildinfo
 .DS_Store
+.blume-verify/

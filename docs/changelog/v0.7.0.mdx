@@ -1,0 +1,32 @@
+---
+title: v0.7.0
+description: Distilled expands into media APIs with a public, Effect-native TMDB v3 SDK.
+type: changelog
+date: 2026-07-18
+changelog:
+  version: 0.7.0
+  category: SDK release
+sidebar:
+  label: v0.7.0
+  order: 1
+---
+
+Distilled now includes a ninth SDK and its first media provider.
+
+## Released
+
+- [`@kevinmichaelchen/distilled-tmdb@0.1.0`](https://www.npmjs.com/package/@kevinmichaelchen/distilled-tmdb)
+
+## Added
+
+- Generated 152 TMDB v3 operations from the official OpenAPI 3.1 document.
+- Covered movies, television, people, search, discovery, trending media, credits, watch providers, lists, authentication, and account workflows.
+- Added redacted bearer-token credentials with `TMDB_API_READ_ACCESS_TOKEN`, the existing `TMDB_API_KEY` variable name as a migration fallback for the same read access token, and configurable `TMDB_API_URL` support.
+- Published the implementation and pinned specification mirror as public GitHub repositories.
+- Added CI drift detection and npm trusted publishing with signed GitHub provenance.
+
+## Verified
+
+The release passed typechecking, tests, deterministic regeneration, and build checks. npm registry metadata, the package tarball, and dependency resolution were independently verified after publication.
+
+`movie-effect` remains available. This release establishes the vendor-native TMDB foundation without prematurely committing to a compatibility facade or deprecation schedule.

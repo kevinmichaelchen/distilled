@@ -43,10 +43,10 @@ export default defineConfig({
     href: "/",
   },
   banner: {
-    content: "All eight SDKs now use the Protocol architecture.",
-    link: { text: "Read the release", href: "/changelog/v0.6.0" },
+    content: "Nine Effect-native SDKs, now including TMDB.",
+    link: { text: "Read the release", href: "/changelog/v0.7.0" },
     dismissible: true,
-    id: "distilled-protocol-engine",
+    id: "distilled-tmdb-release",
   },
   content: {
     root: "docs",

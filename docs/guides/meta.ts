@@ -10,5 +10,6 @@ export default defineMeta({
     "protocol-architecture",
     "generate-an-sdk",
     "publishing",
+    "media-migration",
   ],
 });

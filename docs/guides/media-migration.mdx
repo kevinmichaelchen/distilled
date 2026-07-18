@@ -1,0 +1,44 @@
+---
+title: Media provider migration
+description: The staged replacement of movie-effect and book-effect with vendor-native Distilled providers.
+sidebar:
+  icon: clapperboard
+  order: 6
+---
+
+`movie-effect` and `book-effect` are being replaced incrementally by standalone Distilled providers. The old repositories remain supported during migration; deprecation begins only after their used operations have replacements and migration notes.
+
+## Architecture boundary
+
+Distilled providers expose each vendor's native request and response shapes. HTTP execution, credential redaction, typed failures, retries, and pagination use the shared runtime. Normalized `Movie` and `Book` models do not belong in `@kevinmichaelchen/distilled`; a separate facade can compose providers later if real consumers still need that abstraction.
+
+## Provider sequence
+
+| Provider | Source strategy | Status |
+| --- | --- | --- |
+| TMDB | Official OpenAPI 3.1 mirror | Generated: 152 operations |
+| OMDb | Official Swagger mirror | Next movie provider |
+| Watchmode | Authoritative source discovery | Researching |
+| Google Books | Official Google Discovery document | Generator adapter required |
+| Open Library | Official OpenAPI 3.0.2 mirror | Ready after Google Books |
+| Hardcover | Official GraphQL schema | Deferred |
+
+TMDB is the first replacement because its official contract exercises the complete OpenAPI factory. The generated SDK lives in [`kevinmichaelchen/distilled-tmdb`](https://github.com/kevinmichaelchen/distilled-tmdb), pinned to [`kevinmichaelchen/distilled-spec-tmdb`](https://github.com/kevinmichaelchen/distilled-spec-tmdb).
+
+## Compatibility policy
+
+- Existing media repositories stay on Effect 3 during the transition; duplicating an Effect 4 migration there would create disposable work.
+
+- Credentials accept documented new variable names and deliberate migration aliases where safe. TMDB accepts both `TMDB_API_READ_ACCESS_TOKEN` and the old `TMDB_API_KEY`.
+
+- Vendor-native schemas are authoritative. Camel-case or normalized mappings belong in an optional compatibility facade.
+
+- Old CLI packages are not recreated automatically. Add a CLI only when a maintained workflow requires one.
+
+- Body-level errors, such as OMDb's successful HTTP response with `Response: "False"`, remain provider protocol behavior rather than generic runtime behavior.
+
+## Deprecation gate
+
+Deprecate an old package only after its public operations have replacements, deterministic transport and error tests pass, and a migration table maps old imports to new operations. Archive the old GitHub repository only after the final package release and a documented sunset period.
+
+Hardcover remains deliberately outside the current implementation sequence. A narrow named GraphQL document may be considered later, but this migration will not introduce a general GraphQL generator or revive the deferred Hygraph work.

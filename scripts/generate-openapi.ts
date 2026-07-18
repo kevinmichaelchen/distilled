@@ -385,7 +385,7 @@ function resolveServiceName(
     .find(
       (part) =>
         !part.startsWith("{") &&
-        !/^(?:api|rest|v\d+(?:\.\d+)?)$/i.test(part),
+        !/^(?:api|rest|v?\d+(?:\.\d+)?)$/i.test(part),
     );
   return toSnakeCase(segment ?? "service");
 }

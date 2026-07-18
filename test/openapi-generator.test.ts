@@ -159,6 +159,35 @@ describe("OpenAPI service generator", () => {
     expect(coverage.operations.generated).toBe(8);
   });
 
+  test("skips numeric API version segments when deriving service names", async () => {
+    const { outputDir, config } = await fixture({
+      openapi: "3.1.0",
+      info: { title: "Versioned API", version: "1" },
+      paths: {
+        "/3/movie/{movie_id}": {
+          get: {
+            operationId: "movie-details",
+            parameters: [
+              {
+                name: "movie_id",
+                in: "path",
+                required: true,
+                schema: { type: "integer" },
+              },
+            ],
+            responses: { "200": { description: "ok" } },
+          },
+        },
+      },
+    });
+
+    await generateFromOpenAPI(config);
+
+    const barrel = await readFile(join(outputDir, "index.ts"), "utf8");
+    expect(barrel).toContain('export * as movie from "./movie.ts"');
+    expect(barrel).not.toContain("service_3");
+  });
+
   test("emits direct Redacted schemas", async () => {
     const { outputDir, config } = await fixture({
       openapi: "3.0.3",
